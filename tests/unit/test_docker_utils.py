@@ -143,6 +143,17 @@ def test_remove_container_already_stopped(mock_client):
     fake_container.remove.assert_called_once_with(force=True)
 
 
+def test_remove_container_not_found(mock_client):
+    """Test removing a container that no longer exists in Docker."""
+    client = DockerClient()
+    mock_client.containers.get.side_effect = docker.errors.NotFound("Container not found")
+
+    # Should not raise an exception
+    client.remove_container("nonexistent")
+
+    mock_client.containers.get.assert_called_once_with("nonexistent")
+
+
 def test_get_container_logs(mock_client):
     client = DockerClient()
     fake_container = MagicMock()

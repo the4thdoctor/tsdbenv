@@ -198,8 +198,8 @@ class TestDockerRealLifecycle:
         with pytest.raises(docker.errors.NotFound):
             client.stop_container(fake_id)
 
-        with pytest.raises(docker.errors.NotFound):
-            client.remove_container(fake_id)
+        # remove_container gracefully handles NotFound errors
+        client.remove_container(fake_id)
 
     def test_get_logs_not_found(self):
         """Test error handling when getting logs from non-existent container."""
