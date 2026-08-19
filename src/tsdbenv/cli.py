@@ -79,6 +79,25 @@ def new(postgres, timescaledb, name, port, config, bind_ip, force):
     if not name:
         name = click.prompt("Container name", type=str)
 
+    # Check if container with this name already exists
+    try:
+        existing_containers = cli_state.docker_client.list_containers()
+        existing = next(
+            (c for c in existing_containers if c.get("name") == name), None
+        )
+        if existing:
+            click.echo(
+                f"⚠️  Container '{name}' already exists (status: {existing.get('status')})"
+            )
+            if not click.confirm("Replace it?"):
+                click.echo("Aborted.")
+                return
+            click.echo(f"Removing existing container '{name}'...")
+            cli_state.docker_client.remove_container(existing.get("id"))
+            cli_state.state_tracker.delete_container(name)
+    except Exception as e:
+        click.echo(f"⚠️  Could not check existing containers: {e}")
+
     if port is None:
         port = click.prompt("PostgreSQL port", type=int, default=5432)
 
