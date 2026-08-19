@@ -76,3 +76,4 @@ tsdbenv_logs/
 # OS
 .DS_Store
 Thumbs.db
+.superpowers/
