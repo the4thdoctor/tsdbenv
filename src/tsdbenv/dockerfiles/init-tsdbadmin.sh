@@ -11,7 +11,7 @@ PASSWORD="${TSDBADMIN_PASSWORD:-}"
 # Execute init-tsdbadmin.sql with password variable passed via psql -v flag
 psql -v password="$PASSWORD" <<'EOF'
 -- Create tsdbadmin user as superuser (same as postgres)
-CREATE ROLE tsdbadmin WITH LOGIN SUPERUSER CREATEDB CREATEROLE PASSWORD :password;
+CREATE ROLE tsdbadmin WITH LOGIN SUPERUSER CREATEDB CREATEROLE PASSWORD :'password';
 -- Set default search_path for tsdbadmin
 ALTER ROLE tsdbadmin SET search_path = public, pg_catalog;
 EOF
