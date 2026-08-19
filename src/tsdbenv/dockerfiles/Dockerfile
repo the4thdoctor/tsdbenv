@@ -6,10 +6,9 @@ ARG PG_VERSION=14
 
 FROM postgres:${PG_VERSION}-alpine
 
-# Install TimescaleDB extension from official PostgreSQL repositories
-RUN apk add --no-cache \
-    postgresql-contrib \
-    && sed -i "s/^#shared_preload_libraries/shared_preload_libraries/" /usr/local/share/postgresql/postgresql.conf.sample
+# Install PostgreSQL contrib modules with TimescaleDB extension support
+RUN apk add --no-cache postgresql-contrib timescaledb-postgresql-14 && \
+    echo "shared_preload_libraries = 'timescaledb'" >> /usr/local/share/postgresql/postgresql.conf.sample
 
 # Set environment variables for postgres user
 ENV POSTGRES_USER=postgres
