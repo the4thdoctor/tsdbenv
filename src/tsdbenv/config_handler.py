@@ -3,7 +3,6 @@
 
 import re
 from pathlib import Path
-from typing import Dict, Tuple
 
 from tsdbenv.models import PostgresConfig
 
@@ -65,9 +64,9 @@ class ConfigHandler:
 
         content = path.read_text()
         lines = [
-            l.strip()
-            for l in content.split("\n")
-            if l.strip() and not l.strip().startswith("#")
+            line.strip()
+            for line in content.split("\n")
+            if line.strip() and not line.strip().startswith("#")
         ]
 
         if lines:
