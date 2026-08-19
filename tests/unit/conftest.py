@@ -1,11 +1,14 @@
 # Author: Wagner Bianchi <wagnerbianchijr@gmail.com>
 # Created: 2026-08-19
 
-import pytest
 import tempfile
 from datetime import datetime
 from pathlib import Path
-from tsdbenv.models import Container, VersionMatrix, PostgresConfig
+
+import pytest
+
+from tsdbenv.models import Container, PostgresConfig, VersionMatrix
+
 
 @pytest.fixture
 def sample_container():
@@ -23,6 +26,7 @@ def sample_container():
         tsdbadmin_password="test_password_123",
     )
 
+
 @pytest.fixture
 def sample_version_matrix():
     """Sample VersionMatrix for testing."""
@@ -34,6 +38,7 @@ def sample_version_matrix():
         last_fetched=datetime(2026, 8, 19, 10, 0),
     )
 
+
 @pytest.fixture
 def sample_postgres_config():
     """Sample PostgresConfig for testing."""
@@ -42,6 +47,7 @@ def sample_postgres_config():
         source_file=None,
         is_valid=True,
     )
+
 
 @pytest.fixture
 def temp_state_dir():

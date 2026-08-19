@@ -2,10 +2,12 @@
 # Created: 2026-08-19
 
 import json
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
 from typing import Optional
+
 from tsdbenv.models import VersionMatrix
+
 
 class VersionManager:
     """Manages PostgreSQL × TimescaleDB compatibility matrix."""

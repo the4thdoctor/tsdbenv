@@ -1,12 +1,15 @@
 # Author: Wagner Bianchi <wagnerbianchijr@gmail.com>
 # Created: 2026-08-19
 
-import pytest
 from datetime import datetime, timedelta
 from pathlib import Path
+
+import pytest
+
+from tsdbenv.models import Container
 from tsdbenv.state_tracker import StateTracker
 from tsdbenv.version_manager import VersionManager
-from tsdbenv.models import Container
+
 
 def test_full_lifecycle(temp_state_dir):
     """Test full container lifecycle: create → access → stale → remove."""
@@ -48,6 +51,7 @@ def test_full_lifecycle(temp_state_dir):
     containers = st.load_containers()
     assert len(containers) == 0
 
+
 def test_version_compatibility_flow(temp_state_dir):
     """Test version compatibility validation flow."""
     vm = VersionManager(cache_dir=temp_state_dir)
@@ -57,6 +61,7 @@ def test_version_compatibility_flow(temp_state_dir):
 
     assert vm.is_compatible("14", "2.11.0") is False
     assert vm.is_compatible("99", "2.8.0") is False
+
 
 def test_state_persistence(temp_state_dir):
     """Test that state persists across StateTracker instances."""

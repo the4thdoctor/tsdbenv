@@ -1,17 +1,20 @@
 # Author: Wagner Bianchi <wagnerbianchijr@gmail.com>
 # Created: 2026-08-19
 
-import click
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
+
+import click
+
 from tsdbenv import __version__
-from tsdbenv.version_manager import VersionManager
 from tsdbenv.config_handler import ConfigHandler
-from tsdbenv.state_tracker import StateTracker
-from tsdbenv.network_validator import NetworkValidator
 from tsdbenv.docker_utils import DockerClient
-from tsdbenv.utils import generate_password, ensure_state_dir
 from tsdbenv.models import Container
+from tsdbenv.network_validator import NetworkValidator
+from tsdbenv.state_tracker import StateTracker
+from tsdbenv.utils import ensure_state_dir, generate_password
+from tsdbenv.version_manager import VersionManager
+
 
 class CLIState:
     def __init__(self):
@@ -23,7 +26,9 @@ class CLIState:
         except RuntimeError:
             self.docker_client = None
 
+
 cli_state = CLIState()
+
 
 @click.group(invoke_without_command=True)
 @click.option("--version", is_flag=True, help="Show version and exit")
@@ -42,12 +47,15 @@ def main(ctx, version):
     if ctx.invoked_subcommand is None:
         show_interactive_menu()
 
+
 @main.command()
 @click.option("--postgres", help="PostgreSQL version (e.g., 14)")
 @click.option("--timescaledb", help="TimescaleDB version (e.g., 2.8.0)")
 @click.option("--name", help="Container name")
 @click.option("--port", type=int, default=None, help="PostgreSQL port (default: 5432)")
-@click.option("--config", type=click.Path(exists=True), help="PostgreSQL config file path")
+@click.option(
+    "--config", type=click.Path(exists=True), help="PostgreSQL config file path"
+)
 @click.option("--bind-ip", help="IP to bind container to (default: 127.0.0.1)")
 @click.option("--force", is_flag=True, help="Override version compatibility check")
 def new(postgres, timescaledb, name, port, config, bind_ip, force):
@@ -58,7 +66,9 @@ def new(postgres, timescaledb, name, port, config, bind_ip, force):
         timescaledb = click.prompt("TimescaleDB version", type=str)
 
     if not force and not cli_state.version_manager.is_compatible(postgres, timescaledb):
-        click.echo(f"❌ TimescaleDB {timescaledb} is not compatible with PostgreSQL {postgres}")
+        click.echo(
+            f"❌ TimescaleDB {timescaledb} is not compatible with PostgreSQL {postgres}"
+        )
         raise click.Abort()
 
     if not name:
@@ -83,7 +93,7 @@ def new(postgres, timescaledb, name, port, config, bind_ip, force):
         bind_choice = click.prompt(
             "Network binding",
             type=click.Choice(["localhost", "custom"]),
-            default="localhost"
+            default="localhost",
         )
         if bind_choice == "localhost":
             bind_ip = "127.0.0.1"
@@ -122,6 +132,7 @@ def new(postgres, timescaledb, name, port, config, bind_ip, force):
 
     display_connection_info(container)
 
+
 @main.command()
 def list():
     """List all containers."""
@@ -139,7 +150,10 @@ def list():
     click.echo(f"\n{'Name':<15} {'PG':<5} {'TS':<8} {'IP':<15} {'Port':<6}")
     click.echo("-" * 55)
     for c in containers:
-        click.echo(f"{c.name:<15} {c.postgres_version:<5} {c.timescaledb_version:<8} {c.bind_ip:<15} {c.port:<6}")
+        click.echo(
+            f"{c.name:<15} {c.postgres_version:<5} {c.timescaledb_version:<8} {c.bind_ip:<15} {c.port:<6}"
+        )
+
 
 @main.command()
 @click.argument("container_name", required=False)
@@ -151,11 +165,17 @@ def logs(container_name):
             click.echo("No containers found.")
             return
         container_name = click.prompt(
-            "Container name",
-            type=click.Choice([c.name for c in containers])
+            "Container name", type=click.Choice([c.name for c in containers])
         )
 
-    container = next((c for c in cli_state.state_tracker.load_containers() if c.name == container_name), None)
+    container = next(
+        (
+            c
+            for c in cli_state.state_tracker.load_containers()
+            if c.name == container_name
+        ),
+        None,
+    )
     if not container:
         click.echo(f"Container '{container_name}' not found.")
         return
@@ -163,6 +183,7 @@ def logs(container_name):
     cli_state.state_tracker.mark_accessed(container_name)
     logs_output = cli_state.docker_client.get_container_logs(container.docker_id)
     click.echo(logs_output)
+
 
 @main.command()
 @click.argument("container_name", required=False)
@@ -174,11 +195,17 @@ def remove(container_name):
             click.echo("No containers found.")
             return
         container_name = click.prompt(
-            "Container name",
-            type=click.Choice([c.name for c in containers])
+            "Container name", type=click.Choice([c.name for c in containers])
         )
 
-    container = next((c for c in cli_state.state_tracker.load_containers() if c.name == container_name), None)
+    container = next(
+        (
+            c
+            for c in cli_state.state_tracker.load_containers()
+            if c.name == container_name
+        ),
+        None,
+    )
     if not container:
         click.echo(f"Container '{container_name}' not found.")
         return
@@ -187,6 +214,7 @@ def remove(container_name):
         cli_state.docker_client.remove_container(container.docker_id)
         cli_state.state_tracker.delete_container(container_name)
         click.echo(f"✅ Container '{container_name}' removed.")
+
 
 def display_connection_info(container: Container) -> None:
     """Display connection information to the user."""
@@ -204,6 +232,7 @@ Connect:
   psql -h {container.bind_ip} -U tsdbadmin -d postgres
 """)
 
+
 def show_interactive_menu() -> None:
     """Show interactive menu when no command specified."""
     choice = click.prompt(
@@ -213,7 +242,15 @@ def show_interactive_menu() -> None:
 
     if choice == "new":
         ctx = click.get_current_context()
-        ctx.invoke(new, postgres=None, timescaledb=None, name=None, config=None, bind_ip=None, force=False)
+        ctx.invoke(
+            new,
+            postgres=None,
+            timescaledb=None,
+            name=None,
+            config=None,
+            bind_ip=None,
+            force=False,
+        )
     elif choice == "list":
         ctx = click.get_current_context()
         ctx.invoke(list)
@@ -223,6 +260,7 @@ def show_interactive_menu() -> None:
     elif choice == "remove":
         ctx = click.get_current_context()
         ctx.invoke(remove, container_name=None)
+
 
 if __name__ == "__main__":
     main()

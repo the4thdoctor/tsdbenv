@@ -1,8 +1,9 @@
 # Author: Wagner Bianchi <wagnerbianchijr@gmail.com>
 # Created: 2026-08-19
 
-from typing import Optional, List, Dict
 import shutil
+from typing import Dict, List, Optional
+
 
 class DockerClient:
     """Wrapper around Docker SDK (stubs for Phase 2)."""

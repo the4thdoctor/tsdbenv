@@ -1,9 +1,10 @@
 # Author: Wagner Bianchi <wagnerbianchijr@gmail.com>
 # Created: 2026-08-19
 
-import socket
 import ipaddress
-from typing import Optional, Tuple, List
+import socket
+from typing import List, Optional, Tuple
+
 
 class NetworkValidator:
     """Validates and detects local network IPs."""
@@ -32,7 +33,7 @@ class NetworkValidator:
             local_ip = s.getsockname()[0]
             s.close()
 
-            parts = local_ip.rsplit('.', 1)
+            parts = local_ip.rsplit(".", 1)
             if len(parts) == 2:
                 return f"{parts[0]}.1"
         except Exception:
@@ -43,7 +44,7 @@ class NetworkValidator:
     @staticmethod
     def get_subnet(gateway_ip: str) -> str:
         """Extract subnet from gateway IP."""
-        parts = gateway_ip.rsplit('.', 1)
+        parts = gateway_ip.rsplit(".", 1)
         if len(parts) == 2:
             return f"{parts[0]}.0/24"
         return f"{gateway_ip}/32"
@@ -66,7 +67,10 @@ class NetworkValidator:
 
         gateway = NetworkValidator.get_network_gateway()
         if gateway is None:
-            return (True, "⚠️  Unable to detect network gateway. IP may not be reachable.")
+            return (
+                True,
+                "⚠️  Unable to detect network gateway. IP may not be reachable.",
+            )
 
         subnet = NetworkValidator.get_subnet(gateway)
         if not NetworkValidator.is_ip_on_subnet(bind_ip, subnet):
