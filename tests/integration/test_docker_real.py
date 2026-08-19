@@ -9,11 +9,14 @@ They require Docker to be running and will create/destroy test containers.
 Skip gracefully if Docker is unavailable.
 """
 
+import time
 import uuid
+from pathlib import Path
 from typing import Generator
 
 import docker
 import docker.errors
+import psycopg
 import pytest
 
 from tsdbenv.docker_utils import DockerClient
@@ -206,3 +209,231 @@ class TestDockerRealLifecycle:
 
         with pytest.raises(docker.errors.NotFound):
             client.get_container_logs(fake_id)
+
+
+@pytest.mark.skipif(
+    not _is_docker_available(),
+    reason="Docker not available",
+)
+class TestRealTsdbenvImage:
+    """Integration tests with actual tsdbenv Docker image."""
+
+    @pytest.fixture
+    def built_image(self, cleanup_containers):
+        """Build the tsdbenv image for testing."""
+        client = DockerClient()
+        dockerfile_dir = (
+            Path(__file__).parent.parent.parent
+            / "src/tsdbenv/dockerfiles"
+        )
+
+        if not dockerfile_dir.exists():
+            pytest.skip(f"Dockerfile directory not found: {dockerfile_dir}")
+
+        image_tag = f"tsdbenv:test-pg14-{uuid.uuid4().hex[:8]}"
+
+        try:
+            # Build the image
+            client.build_image(
+                dockerfile_dir=str(dockerfile_dir),
+                tag=image_tag,
+                build_args={"PG_VERSION": "14"},
+            )
+            yield image_tag
+        finally:
+            # Cleanup built image
+            try:
+                client.client.images.remove(image_tag, force=True)
+            except Exception:
+                pass  # Ignore cleanup errors
+
+    def test_real_tsdbenv_image_builds(self, built_image):
+        """Test that the tsdbenv image builds successfully."""
+        client = DockerClient()
+        images = client.client.images.list()
+        image_tags = []
+        for image in images:
+            image_tags.extend(image.tags)
+
+        assert built_image in image_tags
+
+    def test_tsdbenv_container_creation_and_postgres_ready(
+        self, built_image, cleanup_containers
+    ):
+        """Build and create container, verify PostgreSQL is ready.
+
+        This test:
+        1. Creates a container from tsdbenv image
+        2. Waits for PostgreSQL to be ready
+        3. Verifies logs contain expected initialization messages
+        """
+        client = DockerClient()
+        container_name = f"tsdbenv-pg14-{uuid.uuid4().hex[:8]}"
+        password = f"test_pwd_{uuid.uuid4().hex[:8]}"
+
+        try:
+            # Create and start container
+            container_id = client.create_container(
+                image=built_image,
+                name=container_name,
+                environment={"POSTGRES_PASSWORD": "postgres"},
+                ports={5432: 5432},
+                tsdbadmin_password=password,
+            )
+            cleanup_containers(container_id)
+            assert container_id is not None
+            assert len(container_id) > 0
+
+            # Verify PostgreSQL is ready (create_container calls wait_for_postgres)
+            logs = client.get_container_logs(container_id)
+            assert "database system is ready to accept connections" in logs
+
+        except TimeoutError:
+            pytest.fail("PostgreSQL failed to start within timeout")
+
+    def test_tsdbadmin_user_created_in_container(
+        self, built_image, cleanup_containers
+    ):
+        """Test that tsdbadmin user is created with correct password.
+
+        This test:
+        1. Creates container with tsdbenv image
+        2. Waits for PostgreSQL ready
+        3. Connects as tsdbadmin with the provided password
+        4. Runs a query to verify connection works
+        """
+        client = DockerClient()
+        container_name = f"tsdbenv-admin-{uuid.uuid4().hex[:8]}"
+        password = "test_tsdbadmin_password_123"
+
+        try:
+            # Create container with tsdbadmin password
+            container_id = client.create_container(
+                image=built_image,
+                name=container_name,
+                environment={"POSTGRES_PASSWORD": "postgres"},
+                ports={5432: None},  # Let Docker assign random port
+                tsdbadmin_password=password,
+            )
+            cleanup_containers(container_id)
+
+            # Get container to retrieve assigned port
+            container = client.client.containers.get(container_id)
+            ports_info = container.ports
+            if not ports_info or "5432/tcp" not in ports_info:
+                pytest.fail("Could not determine PostgreSQL port")
+
+            port_mapping = ports_info["5432/tcp"]
+            if not port_mapping:
+                pytest.fail("No port mapping found")
+
+            assigned_port = port_mapping[0]["HostPort"]
+            host_port = int(assigned_port)
+
+            # Wait a bit for container to fully initialize
+            time.sleep(2)
+
+            # Try to connect as tsdbadmin
+            max_retries = 10
+            for attempt in range(max_retries):
+                try:
+                    with psycopg.connect(
+                        host="localhost",
+                        port=host_port,
+                        user="tsdbadmin",
+                        password=password,
+                        dbname="postgres",
+                    ) as conn:
+                        with conn.cursor() as cur:
+                            cur.execute("SELECT 1 as test_result")
+                            result = cur.fetchone()
+                            assert result is not None
+                            assert result[0] == 1
+                    break
+                except psycopg.OperationalError as e:
+                    if attempt < max_retries - 1:
+                        time.sleep(1)
+                    else:
+                        pytest.fail(
+                            f"Failed to connect as tsdbadmin after {max_retries} attempts: {e}"
+                        )
+
+        except TimeoutError:
+            pytest.fail("PostgreSQL failed to start within timeout")
+
+    def test_timescaledb_extension_available(
+        self, built_image, cleanup_containers
+    ):
+        """Test that TimescaleDB extension is available in the container.
+
+        This test:
+        1. Creates container from tsdbenv image
+        2. Connects as postgres user
+        3. Verifies TimescaleDB extension is in shared_preload_libraries
+        4. Verifies TimescaleDB extension is loaded and functional
+        """
+        client = DockerClient()
+        container_name = f"tsdbenv-ext-{uuid.uuid4().hex[:8]}"
+
+        try:
+            container_id = client.create_container(
+                image=built_image,
+                name=container_name,
+                environment={"POSTGRES_PASSWORD": "postgres"},
+                ports={5432: None},
+                tsdbadmin_password="test_password",
+            )
+            cleanup_containers(container_id)
+
+            # Get assigned port
+            container = client.client.containers.get(container_id)
+            ports_info = container.ports
+            if not ports_info or "5432/tcp" not in ports_info:
+                pytest.fail("Could not determine PostgreSQL port")
+
+            port_mapping = ports_info["5432/tcp"]
+            assigned_port = int(port_mapping[0]["HostPort"])
+
+            # Wait for container initialization
+            time.sleep(2)
+
+            # Connect and verify extension
+            max_retries = 10
+            for attempt in range(max_retries):
+                try:
+                    with psycopg.connect(
+                        host="localhost",
+                        port=assigned_port,
+                        user="postgres",
+                        password="postgres",
+                        dbname="postgres",
+                    ) as conn:
+                        with conn.cursor() as cur:
+                            # Check shared_preload_libraries
+                            cur.execute(
+                                "SHOW shared_preload_libraries"
+                            )
+                            preload = cur.fetchone()[0]
+                            assert "timescaledb" in preload
+
+                            # Verify TimescaleDB version is available
+                            cur.execute(
+                                "SELECT extversion FROM pg_extension WHERE extname = 'timescaledb'"
+                            )
+                            result = cur.fetchone()
+                            assert result is not None, "TimescaleDB extension not loaded"
+                            version = result[0]
+                            assert version is not None
+                            # Version format is like "2.19.3"
+                            assert "." in version
+                    break
+                except psycopg.OperationalError as e:
+                    if attempt < max_retries - 1:
+                        time.sleep(1)
+                    else:
+                        pytest.fail(
+                            f"Failed to verify TimescaleDB extension: {e}"
+                        )
+
+        except TimeoutError:
+            pytest.fail("PostgreSQL failed to start within timeout")
