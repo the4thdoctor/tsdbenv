@@ -22,6 +22,12 @@ setup(
         "dev": [
             "pytest>=7.0",
             "pytest-cov>=4.0",
+            "flake8>=6.0",
+            "mypy>=1.0",
+            "black>=23.0",
+            "isort>=5.0",
+            "pylint>=3.0",
+            "bandit>=1.7",
         ]
     },
     entry_points={
