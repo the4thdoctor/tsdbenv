@@ -62,10 +62,11 @@ class Container:
     config_path: Optional[str]          # Path to PostgreSQL config file
     docker_id: str                      # Docker container ID
     port: int                           # Mapped PostgreSQL port (default: 5432)
+    bind_ip: str                        # Bind IP ("127.0.0.1" for localhost, or network IP)
     tsdbadmin_password: str             # tsdbadmin user password (auto-generated or user-provided)
 ```
 
-Responsibility: Represent a running/stopped container; serialize to/from JSON; validate version strings. Tracks connection details (port, tsdbadmin credentials) for easy user access.
+Responsibility: Represent a running/stopped container; serialize to/from JSON; validate version strings. Tracks connection details (port, bind IP, tsdbadmin credentials) for easy user access.
 
 ### VersionMatrix
 ```python
@@ -127,7 +128,9 @@ tsdbenv                                # No args → interactive menu
      - Prompt container name
      - Prompt "Load PostgreSQL config?" → accept file path (if not `--config`)
      - Parse config if provided
-     - Prompt network mode (default: bridge)
+     - Prompt "Network binding?" → options: localhost (default), or specific IP from local network
+       - If specific IP: prompt for IP address (e.g., 192.168.1.100) or auto-detect local IPs and offer menu
+       - If localhost: container accessible only on 127.0.0.1:5432
      - Build & run container via Docker
      - Create `tsdbadmin` user as superuser (same privileges as postgres)
      - **Display connection info** (host, port, users, connection command)
@@ -163,7 +166,10 @@ tsdbenv                                # No args → interactive menu
 - Minimal Dockerfile: PostgreSQL + TimescaleDB extension
 - Mount PostgreSQL config if provided: `/etc/postgresql/postgresql.conf`
 - Pass environment variables for simple KV config settings
-- Network mode: bridge (default, user can override)
+- Network mode: bridge with IP binding
+  - If localhost binding (127.0.0.1): container accessible only locally
+  - If network IP binding (e.g., 192.168.1.100): accessible from other machines on network
+- Port mapping: expose container port 5432 to specified IP and port
 - Logs output to `./tsdbenv_logs/<container_name>/`
 - Create `tsdbadmin` user with same privileges as `postgres` user (superuser)
 - On successful creation/update, display connection info to user:
@@ -171,14 +177,14 @@ tsdbenv                                # No args → interactive menu
   ✅ Container 'mydb' created successfully!
   
   Connection Info:
-  - Host: localhost
+  - Host: 192.168.1.100 (or localhost if local binding)
   - Port: 5432 (or mapped port if custom)
   - Admin User: postgres
   - App User: tsdbadmin (same privileges as postgres)
   - Password: [auto-generated or user-provided]
   
   Connect:
-    psql -h localhost -U tsdbadmin -d postgres
+    psql -h 192.168.1.100 -U tsdbadmin -d postgres
   ```
 
 ### Operations
@@ -214,6 +220,7 @@ Location: `~/.tsdbenv/containers.json`
       "docker_id": "abc123def456",
       "config_path": null,
       "port": 5432,
+      "bind_ip": "192.168.1.100",
       "tsdbadmin_password": "auto_generated_secure_password_here"
     }
   ]
