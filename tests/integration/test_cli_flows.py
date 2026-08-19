@@ -30,6 +30,7 @@ def test_cli_new_with_flags(cli_runner):
         "--postgres", "14",
         "--timescaledb", "2.8.0",
         "--name", "testdb",
+        "--port", "5432",
         "--bind-ip", "127.0.0.1",
     ], input="n\n")
     assert result.exit_code == 0 or "created successfully" in result.output
