@@ -47,7 +47,7 @@ class DockerClient:
             Image ID
 
         Raises:
-            docker.errors.BuildError: If build fails
+            RuntimeError: If build fails
         """
         try:
             image, build_logs = self.client.images.build(
@@ -58,7 +58,7 @@ class DockerClient:
             )
             return image.id
         except docker.errors.BuildError as e:
-            raise docker.errors.BuildError(f"Docker build failed: {e}")
+            raise RuntimeError(f"Docker build failed: {e}")
 
     def create_container(
         self,

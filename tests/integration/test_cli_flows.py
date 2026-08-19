@@ -32,8 +32,11 @@ def test_cli_list_empty(cli_runner):
 def test_cli_new_with_flags(cli_runner):
     """Test creating container with flags."""
     with patch(
+        "tsdbenv.cli.cli_state.docker_client.build_image"
+    ) as mock_build, patch(
         "tsdbenv.cli.cli_state.docker_client.create_container"
     ) as mock_docker, patch("tsdbenv.cli.cli_state.state_tracker.save_container"):
+        mock_build.return_value = "image-123"
         mock_docker.return_value = "container-123"
 
         result = cli_runner.invoke(
@@ -54,6 +57,7 @@ def test_cli_new_with_flags(cli_runner):
             input="n\n",
         )
     assert result.exit_code == 0 or "created successfully" in result.output
+    assert mock_build.called
     assert mock_docker.called
 
 
@@ -70,6 +74,8 @@ def test_cli_new_interactive_prompts(cli_runner):
     with patch(
         "tsdbenv.cli.cli_state.version_manager.is_compatible"
     ) as mock_compat, patch(
+        "tsdbenv.cli.cli_state.docker_client.build_image"
+    ) as mock_build, patch(
         "tsdbenv.cli.cli_state.docker_client.create_container"
     ) as mock_docker, patch(
         "tsdbenv.cli.cli_state.state_tracker.save_container"
@@ -77,6 +83,7 @@ def test_cli_new_interactive_prompts(cli_runner):
         "tsdbenv.cli.NetworkValidator.validate_bind_ip"
     ) as mock_validate:
         mock_compat.return_value = True
+        mock_build.return_value = "image-123"
         mock_docker.return_value = "container-123"
         mock_validate.return_value = (True, None)
 
@@ -86,6 +93,7 @@ def test_cli_new_interactive_prompts(cli_runner):
             input="14\n2.8.0\ntestdb\n5432\nn\nlocalhost\n",
         )
         assert result.exit_code == 0
+        assert mock_build.called
         assert mock_docker.called
 
 
