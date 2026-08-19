@@ -158,11 +158,11 @@ def list():
         if click.confirm(f"Container '{s.name}' unused for 5+ days. Remove?"):
             cli_state.state_tracker.delete_container(s.name)
 
-    click.echo(f"\n{'Name':<15} {'PG':<5} {'TS':<8} {'IP':<15} {'Port':<6}")
-    click.echo("-" * 55)
+    click.echo(f"\n{'Name':<15} {'PG':<5} {'TSDB':<10} {'IP':<15} {'Port':<6}")
+    click.echo("-" * 57)
     for c in containers:
         click.echo(
-            f"{c.name:<15} {c.postgres_version:<5} {c.timescaledb_version:<8} {c.bind_ip:<15} {c.port:<6}"
+            f"{c.name:<15} {c.postgres_version:<5} {c.timescaledb_version:<10} {c.bind_ip:<15} {c.port:<6}"
         )
 
 
