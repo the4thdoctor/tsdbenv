@@ -7,7 +7,10 @@
 Works on macOS, Linux, and any system with Python and Git.
 
 ```bash
-curl https://raw.githubusercontent.com/wagnerbianchijr/tsdbenv/main/install.sh | bash
+git clone https://github.com/wagnerbianchijr/tsdbenv.git
+cd tsdbenv
+chmod +x install.sh
+./install.sh
 ```
 
 This script:
