@@ -77,14 +77,13 @@ def new(postgres, timescaledb, name, port, config, bind_ip, force):
     if port is None:
         port = click.prompt("PostgreSQL port", type=int, default=5432)
 
-    postgres_config = None
     if not config:
         if click.confirm("Load PostgreSQL config file?"):
             config = click.prompt("Config file path", type=click.Path(exists=True))
 
     if config:
         try:
-            postgres_config = ConfigHandler.parse_file(Path(config))
+            ConfigHandler.parse_file(Path(config))
         except Exception as e:
             click.echo(f"❌ Failed to parse config: {e}")
             return
