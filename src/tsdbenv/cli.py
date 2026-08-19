@@ -264,12 +264,11 @@ def display_connection_info(container: Container) -> None:
 Connection Info:
 - Host: {container.bind_ip}
 - Port: {container.port}
-- Admin User: postgres
-- App User: tsdbadmin (same privileges as postgres)
+- App User: tsdbadmin
 - Password: {container.tsdbadmin_password}
 
 Connect:
-  psql -h {container.bind_ip} -U tsdbadmin -d postgres
+  psql -h {container.bind_ip} -U tsdbadmin -d tsdb
 """)
 
 
