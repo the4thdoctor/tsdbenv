@@ -12,6 +12,8 @@ PASSWORD="${TSDBADMIN_PASSWORD:-}"
 psql -v password="$PASSWORD" <<'EOF'
 -- Create tsdbadmin user as superuser (same as postgres)
 CREATE ROLE tsdbadmin WITH LOGIN SUPERUSER CREATEDB CREATEROLE PASSWORD :'password';
+-- Create default tsdb database owned by tsdbadmin
+CREATE DATABASE tsdb OWNER tsdbadmin;
 -- Set default search_path for tsdbadmin
 ALTER ROLE tsdbadmin SET search_path = public, pg_catalog;
 EOF
