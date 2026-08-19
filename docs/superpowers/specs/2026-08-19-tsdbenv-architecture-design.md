@@ -61,9 +61,11 @@ class Container:
     last_accessed_at: datetime          # Last user interaction
     config_path: Optional[str]          # Path to PostgreSQL config file
     docker_id: str                      # Docker container ID
+    port: int                           # Mapped PostgreSQL port (default: 5432)
+    tsdbadmin_password: str             # tsdbadmin user password (auto-generated or user-provided)
 ```
 
-Responsibility: Represent a running/stopped container; serialize to/from JSON; validate version strings.
+Responsibility: Represent a running/stopped container; serialize to/from JSON; validate version strings. Tracks connection details (port, tsdbadmin credentials) for easy user access.
 
 ### VersionMatrix
 ```python
@@ -127,6 +129,8 @@ tsdbenv                                # No args → interactive menu
      - Parse config if provided
      - Prompt network mode (default: bridge)
      - Build & run container via Docker
+     - Create `tsdbadmin` user as superuser (same privileges as postgres)
+     - **Display connection info** (host, port, users, connection command)
    
    - If `--list` flag or user chooses "list":
      - Display all containers with status (running/stopped)
@@ -161,12 +165,27 @@ tsdbenv                                # No args → interactive menu
 - Pass environment variables for simple KV config settings
 - Network mode: bridge (default, user can override)
 - Logs output to `./tsdbenv_logs/<container_name>/`
+- Create `tsdbadmin` user with same privileges as `postgres` user (superuser)
+- On successful creation/update, display connection info to user:
+  ```
+  ✅ Container 'mydb' created successfully!
+  
+  Connection Info:
+  - Host: localhost
+  - Port: 5432 (or mapped port if custom)
+  - Admin User: postgres
+  - App User: tsdbadmin (same privileges as postgres)
+  - Password: [auto-generated or user-provided]
+  
+  Connect:
+    psql -h localhost -U tsdbadmin -d postgres
+  ```
 
 ### Operations
-- `start(container_name)` — start stopped container
+- `start(container_name)` — start stopped container; display connection info on start
 - `stop(container_name)` — graceful stop
 - `remove(container_name)` — delete container & data
-- `list()` — return all containers (running + stopped)
+- `list()` — return all containers (running + stopped) with connection details
 - `get_logs(container_name)` — tail/stream logs
 
 ### Error Handling
@@ -174,6 +193,7 @@ tsdbenv                                # No args → interactive menu
 - Invalid image → suggest pulling it
 - Port conflicts → suggest remapping or removing conflicting container
 - Build failures → display Docker build output to user
+- User creation failures → log error, offer to retry or use default postgres user
 
 ---
 
@@ -192,7 +212,9 @@ Location: `~/.tsdbenv/containers.json`
       "created_at": "2026-08-19T10:30:00Z",
       "last_accessed_at": "2026-08-19T14:15:00Z",
       "docker_id": "abc123def456",
-      "config_path": null
+      "config_path": null,
+      "port": 5432,
+      "tsdbadmin_password": "auto_generated_secure_password_here"
     }
   ]
 }
@@ -370,10 +392,12 @@ docs/
 ## 14. Success Criteria
 
 - ✅ User can run `tsdbenv --new` and create a PostgreSQL + TimescaleDB container with version validation
+- ✅ On container creation, `tsdbadmin` user created with superuser privileges (same as postgres)
+- ✅ Connection info displayed to user after container creation/start (host, port, users, connection command)
 - ✅ Version compatibility matrix fetched and cached; incompatible versions rejected with clear messages
-- ✅ Container state tracked in JSON; stale containers (5d+) detected and warned
+- ✅ Container state tracked in JSON with port and tsdbadmin password; stale containers (5d+) detected and warned
 - ✅ CLI supports both interactive prompts and flags for automation
-- ✅ Docker lifecycle operations (start, stop, remove, list, logs) functional
+- ✅ Docker lifecycle operations (start, stop, remove, list, logs) functional; list shows connection details
 - ✅ Logs available at `./tsdbenv_logs/<container_name>/`
 - ✅ 80%+ test coverage on core modules
 - ✅ Clean, OO code with no external overhead beyond core dependencies
