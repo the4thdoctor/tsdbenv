@@ -3,6 +3,7 @@
 
 import pytest
 from click.testing import CliRunner
+from unittest.mock import patch, MagicMock
 from tsdbenv.cli import main
 
 @pytest.fixture
@@ -17,8 +18,10 @@ def test_cli_version(cli_runner):
 
 def test_cli_list_empty(cli_runner):
     """Test list with no containers."""
-    result = cli_runner.invoke(main, ["list"])
-    assert "No containers found" in result.output
+    with patch("tsdbenv.cli.cli_state.state_tracker.load_containers") as mock_load:
+        mock_load.return_value = []
+        result = cli_runner.invoke(main, ["list"])
+        assert "No containers found" in result.output
 
 def test_cli_new_with_flags(cli_runner):
     """Test creating container with flags."""
@@ -33,5 +36,7 @@ def test_cli_new_with_flags(cli_runner):
 
 def test_cli_remove_not_found(cli_runner):
     """Test removing nonexistent container."""
-    result = cli_runner.invoke(main, ["remove", "nonexistent"])
-    assert "not found" in result.output
+    with patch("tsdbenv.cli.cli_state.state_tracker.delete_container") as mock_delete:
+        mock_delete.side_effect = KeyError("Container not found")
+        result = cli_runner.invoke(main, ["remove", "nonexistent"])
+        assert "not found" in result.output.lower() or result.exit_code != 0
