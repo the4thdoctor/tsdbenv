@@ -95,6 +95,34 @@ class PostgresConfig:
 
 Responsibility: Parse both simple key=value files and full PostgreSQL `.conf` files; validate syntax; convert to environment variables or Docker config mount.
 
+### NetworkValidator (Utility)
+```python
+class NetworkValidator:
+    @staticmethod
+    def get_local_ips() -> list[str]
+        # Detect all local network IPs on user's machine
+    
+    @staticmethod
+    def get_network_gateway() -> Optional[str]
+        # Detect LAN gateway IP (e.g., 192.168.1.1)
+    
+    @staticmethod
+    def get_subnet(gateway_ip: str) -> str
+        # Extract subnet from gateway (e.g., 192.168.1.0/24)
+    
+    @staticmethod
+    def is_ip_on_subnet(ip: str, subnet: str) -> bool
+        # Check if IP is on same subnet as gateway
+    
+    @staticmethod
+    def validate_bind_ip(bind_ip: str) -> (bool, Optional[str])
+        # Returns (is_valid, warning_message)
+        # is_valid: True if IP is on LAN or is localhost
+        # warning_message: alert if IP is not on detected subnet
+```
+
+Responsibility: Detect local network IPs, validate user-provided bind IP against LAN gateway, provide actionable warnings if IP is unreachable.
+
 ---
 
 ## 4. User Interaction Flow (CLI)
@@ -129,7 +157,13 @@ tsdbenv                                # No args → interactive menu
      - Prompt "Load PostgreSQL config?" → accept file path (if not `--config`)
      - Parse config if provided
      - Prompt "Network binding?" → options: localhost (default), or specific IP from local network
-       - If specific IP: prompt for IP address (e.g., 192.168.1.100) or auto-detect local IPs and offer menu
+       - If specific IP: 
+         - Auto-detect user's local network IPs and LAN gateway; offer menu of valid IPs
+         - If user enters custom IP: validate it against LAN gateway
+           - Extract subnet from gateway (e.g., 192.168.1.0/24)
+           - Check if provided IP is on same subnet
+           - If invalid: alert "⚠️ Warning: IP 192.168.2.100 is not on your LAN (gateway: 192.168.1.1). You may not be able to access the container. Continue? (y/n)"
+           - Allow user to override or select from detected IPs
        - If localhost: container accessible only on 127.0.0.1:5432
      - Build & run container via Docker
      - Create `tsdbadmin` user as superuser (same privileges as postgres)
@@ -401,10 +435,12 @@ docs/
 - ✅ User can run `tsdbenv --new` and create a PostgreSQL + TimescaleDB container with version validation
 - ✅ On container creation, `tsdbadmin` user created with superuser privileges (same as postgres)
 - ✅ Connection info displayed to user after container creation/start (host, port, users, connection command)
+- ✅ Network binding: localhost by default, or user selects/enters IP with validation against LAN gateway
+- ✅ IP validation alerts user if bind IP is not on same subnet as LAN gateway; offers detected IPs or override
 - ✅ Version compatibility matrix fetched and cached; incompatible versions rejected with clear messages
-- ✅ Container state tracked in JSON with port and tsdbadmin password; stale containers (5d+) detected and warned
+- ✅ Container state tracked in JSON with port, bind_ip, and tsdbadmin password; stale containers (5d+) detected and warned
 - ✅ CLI supports both interactive prompts and flags for automation
-- ✅ Docker lifecycle operations (start, stop, remove, list, logs) functional; list shows connection details
+- ✅ Docker lifecycle operations (start, stop, remove, list, logs) functional; list shows connection details (including bind IP)
 - ✅ Logs available at `./tsdbenv_logs/<container_name>/`
 - ✅ 80%+ test coverage on core modules
 - ✅ Clean, OO code with no external overhead beyond core dependencies
