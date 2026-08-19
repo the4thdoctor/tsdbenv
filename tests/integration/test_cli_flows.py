@@ -31,9 +31,7 @@ def test_cli_list_empty(cli_runner):
 
 def test_cli_new_with_flags(cli_runner):
     """Test creating container with flags."""
-    with patch(
-        "tsdbenv.cli.cli_state.docker_client.build_image"
-    ) as mock_build, patch(
+    with patch("tsdbenv.cli.cli_state.docker_client.build_image") as mock_build, patch(
         "tsdbenv.cli.cli_state.docker_client.create_container"
     ) as mock_docker, patch("tsdbenv.cli.cli_state.state_tracker.save_container"):
         mock_build.return_value = "image-123"
@@ -47,8 +45,6 @@ def test_cli_new_with_flags(cli_runner):
                 "14",
                 "--timescaledb",
                 "2.8.0",
-                "--name",
-                "testdb",
                 "--port",
                 "5432",
                 "--bind-ip",
@@ -90,7 +86,7 @@ def test_cli_new_interactive_prompts(cli_runner):
         result = cli_runner.invoke(
             main,
             ["new"],
-            input="14\n2.8.0\ntestdb\n5432\nn\nlocalhost\n",
+            input="14\n2.8.0\n5432\nn\nlocalhost\n",
         )
         assert result.exit_code == 0
         assert mock_build.called

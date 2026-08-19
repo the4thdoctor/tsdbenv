@@ -1,6 +1,7 @@
 # Author: Wagner Bianchi <wagnerbianchijr@gmail.com>
 # Created: 2026-08-19
 
+import hashlib
 from datetime import datetime
 from pathlib import Path
 
@@ -56,14 +57,13 @@ def main(ctx, version):
 @main.command()
 @click.option("--postgres", help="PostgreSQL version (e.g., 14)")
 @click.option("--timescaledb", help="TimescaleDB version (e.g., 2.8.0)")
-@click.option("--name", help="Container name")
 @click.option("--port", type=int, default=None, help="PostgreSQL port (default: 5432)")
 @click.option(
     "--config", type=click.Path(exists=True), help="PostgreSQL config file path"
 )
 @click.option("--bind-ip", help="IP to bind container to (default: 127.0.0.1)")
 @click.option("--force", is_flag=True, help="Override version compatibility check")
-def new(postgres, timescaledb, name, port, config, bind_ip, force):
+def new(postgres, timescaledb, port, config, bind_ip, force):
     """Create a new PostgreSQL + TimescaleDB container."""
     if not postgres:
         postgres = click.prompt("PostgreSQL version", type=str)
@@ -76,27 +76,9 @@ def new(postgres, timescaledb, name, port, config, bind_ip, force):
         )
         raise click.Abort()
 
-    if not name:
-        name = click.prompt("Container name", type=str)
-
-    # Check if container with this name already exists
-    try:
-        existing_containers = cli_state.docker_client.list_containers()
-        existing = next(
-            (c for c in existing_containers if c.get("name") == name), None
-        )
-        if existing:
-            click.echo(
-                f"⚠️  Container '{name}' already exists (status: {existing.get('status')})"
-            )
-            if not click.confirm("Replace it?"):
-                click.echo("Aborted.")
-                return
-            click.echo(f"Removing existing container '{name}'...")
-            cli_state.docker_client.remove_container(existing.get("id"))
-            cli_state.state_tracker.delete_container(name)
-    except Exception as e:
-        click.echo(f"⚠️  Could not check existing containers: {e}")
+    # Generate unique container name from current timestamp
+    timestamp_hash = hashlib.md5(str(datetime.now()).encode()).hexdigest()[:8]
+    name = f"tsdb-{timestamp_hash}"
 
     if port is None:
         port = click.prompt("PostgreSQL port", type=int, default=5432)

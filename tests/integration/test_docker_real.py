@@ -222,10 +222,7 @@ class TestRealTsdbenvImage:
     def built_image(self, cleanup_containers):
         """Build the tsdbenv image for testing."""
         client = DockerClient()
-        dockerfile_dir = (
-            Path(__file__).parent.parent.parent
-            / "src/tsdbenv/dockerfiles"
-        )
+        dockerfile_dir = Path(__file__).parent.parent.parent / "src/tsdbenv/dockerfiles"
 
         if not dockerfile_dir.exists():
             pytest.skip(f"Dockerfile directory not found: {dockerfile_dir}")
@@ -291,9 +288,7 @@ class TestRealTsdbenvImage:
         except TimeoutError:
             pytest.fail("PostgreSQL failed to start within timeout")
 
-    def test_tsdbadmin_user_created_in_container(
-        self, built_image, cleanup_containers
-    ):
+    def test_tsdbadmin_user_created_in_container(self, built_image, cleanup_containers):
         """Test that tsdbadmin user is created with correct password.
 
         This test:
@@ -361,9 +356,7 @@ class TestRealTsdbenvImage:
         except TimeoutError:
             pytest.fail("PostgreSQL failed to start within timeout")
 
-    def test_timescaledb_extension_available(
-        self, built_image, cleanup_containers
-    ):
+    def test_timescaledb_extension_available(self, built_image, cleanup_containers):
         """Test that TimescaleDB extension is available in the container.
 
         This test:
@@ -410,9 +403,7 @@ class TestRealTsdbenvImage:
                     ) as conn:
                         with conn.cursor() as cur:
                             # Check shared_preload_libraries
-                            cur.execute(
-                                "SHOW shared_preload_libraries"
-                            )
+                            cur.execute("SHOW shared_preload_libraries")
                             preload = cur.fetchone()[0]
                             assert "timescaledb" in preload
 
@@ -421,7 +412,9 @@ class TestRealTsdbenvImage:
                                 "SELECT extversion FROM pg_extension WHERE extname = 'timescaledb'"
                             )
                             result = cur.fetchone()
-                            assert result is not None, "TimescaleDB extension not loaded"
+                            assert (
+                                result is not None
+                            ), "TimescaleDB extension not loaded"
                             version = result[0]
                             assert version is not None
                             # Version format is like "2.19.3"
@@ -431,9 +424,7 @@ class TestRealTsdbenvImage:
                     if attempt < max_retries - 1:
                         time.sleep(1)
                     else:
-                        pytest.fail(
-                            f"Failed to verify TimescaleDB extension: {e}"
-                        )
+                        pytest.fail(f"Failed to verify TimescaleDB extension: {e}")
 
         except TimeoutError:
             pytest.fail("PostgreSQL failed to start within timeout")
