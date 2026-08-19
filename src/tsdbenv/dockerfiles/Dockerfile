@@ -6,15 +6,10 @@ ARG PG_VERSION=14
 
 FROM timescale/timescaledb:latest-pg${PG_VERSION}-oss
 
-# Install additional PostgreSQL extensions
-RUN apt-get update && apt-get install -y \
-    postgresql-${PG_VERSION}-pgvector \
-    postgresql-${PG_VERSION}-postgres-fdw \
-    && apt-get clean && rm -rf /var/lib/apt/lists/*
-
 # TimescaleDB extension is pre-configured in the base image
-# Add vector and other extensions to shared_preload_libraries
-RUN echo "shared_preload_libraries = 'timescaledb,vector'" >> /etc/postgresql/postgresql.conf.sample
+# Built-in extensions available: pg_buffercache, pg_stat_statements, postgres_fdw
+# Note: pgvector and vectorscale require additional packages not in standard repos
+# timescaledb_toolkit is available in timescale images
 
 # Set environment variables for postgres user
 ENV POSTGRES_USER=postgres
