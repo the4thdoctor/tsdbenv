@@ -16,6 +16,11 @@ from tsdbenv.utils import ensure_state_dir, generate_password
 from tsdbenv.version_manager import VersionManager
 
 
+def get_dockerfiles_dir() -> Path:
+    """Get the path to the dockerfiles directory."""
+    return Path(__file__).parent / "dockerfiles"
+
+
 class CLIState:
     def __init__(self):
         self.state_dir = ensure_state_dir()
@@ -108,11 +113,27 @@ def new(postgres, timescaledb, name, port, config, bind_ip, force):
             return
 
     tsdbadmin_password = generate_password()
+
+    # Build custom Docker image with TimescaleDB and init scripts
+    try:
+        dockerfile_dir = str(get_dockerfiles_dir())
+        image_tag = f"tsdbenv:pg{postgres}-latest"
+        click.echo(f"Building Docker image {image_tag}...")
+        cli_state.docker_client.build_image(
+            dockerfile_dir=dockerfile_dir,
+            tag=image_tag,
+            build_args={"PG_VERSION": postgres},
+        )
+    except Exception as e:
+        click.echo(f"❌ Failed to build Docker image: {e}")
+        raise click.Abort()
+
     container_id = cli_state.docker_client.create_container(
-        image=f"postgres:{postgres}-alpine",
+        image=image_tag,
         name=name,
         environment={"POSTGRES_PASSWORD": "postgres", "PGPASSWORD": tsdbadmin_password},
         ports={5432: port},
+        tsdbadmin_password=tsdbadmin_password,
     )
 
     container = Container(
