@@ -2,15 +2,12 @@
 
 ## Quick Install (Recommended)
 
-### Option 1: Installer Script (Universal)
+### Option 1: Installer Script (One Command)
 
-Works on macOS, Linux, and any system with Python and Git.
+Works on macOS, Linux, and any system with Python, Git, and curl.
 
 ```bash
-git clone https://github.com/wagnerbianchijr/tsdbenv.git
-cd tsdbenv
-chmod +x install.sh
-./install.sh
+curl https://raw.githubusercontent.com/wagnerbianchijr/tsdbenv/main/install.sh | bash
 ```
 
 This script:
