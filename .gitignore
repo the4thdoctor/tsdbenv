@@ -1,0 +1,78 @@
+# Claude Code & AI Tool Files
+# Add any Claude-specific files here (CLAUDE.md, plans, memory, prompts, etc.)
+CLAUDE.md
+.claude/
+.cursor/
+.cursorrules
+.copilot/
+GEMINI.md
+AGENTS.md
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+.hypothesis/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Virtual Environments
+venv/
+ENV/
+env/
+.venv
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Local development
+*.log
+local/
+tmp/
+tsdbenv_logs/
+~/.tsdbenv/
+
+# State & caches
+.tsdbenv/
+*.json.bak
+
+# OS
+.DS_Store
+Thumbs.db
