@@ -31,12 +31,15 @@ python -m tsdbenv.cli               # Main CLI entry point
 
 **Core Concept**: Container-based environment manager for PostgreSQL + TimescaleDB. User provides versions → software validates compatibility → builds and manages Docker containers with persistent state and easy access to logs.
 
+**Phase 3 (Complete)**: Real Docker SDK fully integrated. Containers created via Python Docker SDK, images built from Dockerfile, automatic tsdbadmin user initialization with secure password handling, comprehensive health checks, and complete container lifecycle management.
+
 **Key Design Decisions**:
 - Object-oriented Python 3+ throughout
 - Follow pgenv model (simple, version-focused)
 - Docker bridge networking for container isolation
 - Container state tracked locally to warn about unused instances (5+ days)
 - User interaction flow: identify container (new or existing) → apply config → build/run
+- Real Docker SDK integration for production-grade container operations
 
 **Main Layers**:
 1. **CLI/Interface** — User-facing interaction, prompts for version/config selection
