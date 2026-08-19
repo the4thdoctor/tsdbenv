@@ -8,12 +8,22 @@ PostgreSQL + TimescaleDB environment manager via Docker.
 
 ## Installation
 
+### Quick Install (One Command)
+
+```bash
+curl https://raw.githubusercontent.com/wagnerbianchijr/tsdbenv/main/install.sh | bash
+```
+
+### Manual Install
+
 ```bash
 git clone https://github.com/wagnerbianchijr/tsdbenv.git
 cd tsdbenv
 pip install -r requirements.txt
 pip install -e .
 ```
+
+For detailed installation options including Homebrew, see [INSTALL.md](INSTALL.md).
 
 ## Quick Start
 
