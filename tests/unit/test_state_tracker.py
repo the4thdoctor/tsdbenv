@@ -1,17 +1,21 @@
 # Author: Wagner Bianchi <wagnerbianchijr@gmail.com>
 # Created: 2026-08-19
 
-import pytest
 from datetime import datetime, timedelta
 from pathlib import Path
-from tsdbenv.state_tracker import StateTracker
+
+import pytest
+
 from tsdbenv.models import Container
+from tsdbenv.state_tracker import StateTracker
+
 
 def test_state_tracker_init(temp_state_dir):
     """Test StateTracker initialization."""
     st = StateTracker(state_dir=temp_state_dir)
     assert st.state_dir == temp_state_dir
     assert st.state_file == temp_state_dir / "containers.json"
+
 
 def test_save_and_load_container(temp_state_dir, sample_container):
     """Test saving and loading a container."""
@@ -21,6 +25,7 @@ def test_save_and_load_container(temp_state_dir, sample_container):
     containers = st.load_containers()
     assert len(containers) == 1
     assert containers[0].name == "testdb"
+
 
 def test_save_multiple_containers(temp_state_dir, sample_container):
     """Test saving multiple containers."""
@@ -44,6 +49,7 @@ def test_save_multiple_containers(temp_state_dir, sample_container):
     containers = st.load_containers()
     assert len(containers) == 2
 
+
 def test_delete_container(temp_state_dir, sample_container):
     """Test deleting a container from state."""
     st = StateTracker(state_dir=temp_state_dir)
@@ -53,6 +59,7 @@ def test_delete_container(temp_state_dir, sample_container):
 
     containers = st.load_containers()
     assert len(containers) == 0
+
 
 def test_mark_accessed(temp_state_dir, sample_container):
     """Test updating last_accessed_at timestamp."""
@@ -65,6 +72,7 @@ def test_mark_accessed(temp_state_dir, sample_container):
     containers = st.load_containers()
     after = containers[0].last_accessed_at
     assert after > before
+
 
 def test_get_stale_containers(temp_state_dir):
     """Test detecting stale containers (not accessed for 5+ days)."""
@@ -101,6 +109,7 @@ def test_get_stale_containers(temp_state_dir):
     stale_list = st.get_stale_containers(days=5)
     assert len(stale_list) == 1
     assert stale_list[0].name == "stale"
+
 
 def test_load_containers_empty(temp_state_dir):
     """Test loading containers when state file doesn't exist."""

@@ -1,11 +1,14 @@
 # Author: Wagner Bianchi <wagnerbianchijr@gmail.com>
 # Created: 2026-08-19
 
-import pytest
 import tempfile
-from pathlib import Path
 from datetime import datetime
-from tsdbenv.models import Container, VersionMatrix, PostgresConfig
+from pathlib import Path
+
+import pytest
+
+from tsdbenv.models import Container, PostgresConfig, VersionMatrix
+
 
 @pytest.fixture
 def temp_state_dir():
@@ -13,11 +16,13 @@ def temp_state_dir():
     with tempfile.TemporaryDirectory() as tmpdir:
         yield Path(tmpdir)
 
+
 @pytest.fixture
 def mock_home_dir(temp_state_dir, monkeypatch):
     """Mock home directory for tsdbenv state."""
     monkeypatch.setenv("HOME", str(temp_state_dir))
     return temp_state_dir
+
 
 @pytest.fixture
 def sample_container():
@@ -35,6 +40,7 @@ def sample_container():
         tsdbadmin_password="secure_pwd",
     )
 
+
 @pytest.fixture
 def sample_version_matrix():
     """Provide a sample VersionMatrix for testing."""
@@ -45,6 +51,7 @@ def sample_version_matrix():
         },
         last_fetched=datetime(2026, 8, 19, 10, 0),
     )
+
 
 @pytest.fixture
 def sample_postgres_config():

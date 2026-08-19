@@ -4,7 +4,9 @@
 import re
 from pathlib import Path
 from typing import Dict, Tuple
+
 from tsdbenv.models import PostgresConfig
+
 
 class ConfigHandler:
     """Parses PostgreSQL configuration files."""
@@ -16,13 +18,13 @@ class ConfigHandler:
             raise FileNotFoundError(f"Config file not found: {path}")
 
         settings = {}
-        for line in path.read_text().strip().split('\n'):
+        for line in path.read_text().strip().split("\n"):
             line = line.strip()
-            if not line or line.startswith('#'):
+            if not line or line.startswith("#"):
                 continue
 
-            if '=' in line:
-                key, value = line.split('=', 1)
+            if "=" in line:
+                key, value = line.split("=", 1)
                 settings[key.strip()] = value.strip()
 
         return PostgresConfig(
@@ -38,13 +40,13 @@ class ConfigHandler:
             raise FileNotFoundError(f"Config file not found: {path}")
 
         settings = {}
-        for line in path.read_text().strip().split('\n'):
+        for line in path.read_text().strip().split("\n"):
             line = line.strip()
-            if not line or line.startswith('#'):
+            if not line or line.startswith("#"):
                 continue
 
             # Match "key = value" or key=value
-            match = re.match(r'^([a-zA-Z_][a-zA-Z0-9_]*)\s*=\s*(.+)$', line)
+            match = re.match(r"^([a-zA-Z_][a-zA-Z0-9_]*)\s*=\s*(.+)$", line)
             if match:
                 key, value = match.groups()
                 settings[key] = value.strip()
@@ -62,10 +64,14 @@ class ConfigHandler:
             raise FileNotFoundError(f"Config file not found: {path}")
 
         content = path.read_text()
-        lines = [l.strip() for l in content.split('\n') if l.strip() and not l.strip().startswith('#')]
+        lines = [
+            l.strip()
+            for l in content.split("\n")
+            if l.strip() and not l.strip().startswith("#")
+        ]
 
         if lines:
-            kv_count = sum(1 for line in lines if '=' in line)
+            kv_count = sum(1 for line in lines if "=" in line)
             if kv_count / len(lines) > 0.8:
                 return ConfigHandler.parse_simple_kv(path)
 

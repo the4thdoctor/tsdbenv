@@ -1,0 +1,32 @@
+# Task 1 Fix Round 1 Review Package
+
+## Commit List (fix only)
+a823624 fix: remove broken imports from __init__.py (deferred to later tasks)
+
+## Full Diff
+diff --git a/src/tsdbenv/__init__.py b/src/tsdbenv/__init__.py
+index 707cf57..a1ff387 100644
+--- a/src/tsdbenv/__init__.py
++++ b/src/tsdbenv/__init__.py
+@@ -1,21 +1,5 @@
+ # Author: Wagner Bianchi <wagnerbianchijr@gmail.com>
+ # Created: 2026-08-19
+ 
+ __version__ = "0.1.0"
+ __author__ = "Wagner Bianchi"
+-
+-from tsdbenv.models import Container, VersionMatrix, PostgresConfig
+-from tsdbenv.version_manager import VersionManager
+-from tsdbenv.config_handler import ConfigHandler
+-from tsdbenv.state_tracker import StateTracker
+-from tsdbenv.network_validator import NetworkValidator
+-
+-__all__ = [
+-    "Container",
+-    "VersionMatrix",
+-    "PostgresConfig",
+-    "VersionManager",
+-    "ConfigHandler",
+-    "StateTracker",
+-    "NetworkValidator",
+-]

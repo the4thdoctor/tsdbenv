@@ -1,14 +1,17 @@
 # Author: Wagner Bianchi <wagnerbianchijr@gmail.com>
 # Created: 2026-08-19
 
-import pytest
 from unittest.mock import MagicMock, patch
+
+import pytest
+
 
 @pytest.fixture
 def mock_docker_client():
     """Mock Docker client for integration tests."""
     with patch("docker.from_env") as mock:
         yield mock
+
 
 @pytest.fixture
 def mock_docker_container():

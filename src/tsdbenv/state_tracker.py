@@ -2,10 +2,12 @@
 # Created: 2026-08-19
 
 import json
-from pathlib import Path
 from datetime import datetime, timedelta
+from pathlib import Path
 from typing import List, Optional
+
 from tsdbenv.models import Container
+
 
 class StateTracker:
     """Manages container state (load/save/stale detection)."""
@@ -67,9 +69,7 @@ class StateTracker:
 
     def _write_state(self, containers: List[Container]) -> None:
         """Write containers to state file."""
-        data = {
-            "containers": [c.model_dump() for c in containers]
-        }
+        data = {"containers": [c.model_dump() for c in containers]}
         data_json = json.dumps(
             data,
             default=lambda x: x.isoformat() if isinstance(x, datetime) else x,
