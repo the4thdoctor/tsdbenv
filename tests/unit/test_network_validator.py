@@ -102,3 +102,30 @@ def test_validate_bind_ip_no_gateway(mock_gateway):
     assert is_valid is True
     assert msg is not None
     assert "Unable to detect network gateway" in msg
+
+
+def test_find_available_port_success():
+    """Test finding an available port."""
+    port = NetworkValidator.find_available_port("127.0.0.1", 9000)
+    assert port >= 9000
+    assert port < 9100
+
+
+def test_find_available_port_default():
+    """Test finding available port with default start port."""
+    port = NetworkValidator.find_available_port()
+    assert port >= 5432
+    assert port < 5532
+
+
+@patch("socket.socket")
+def test_find_available_port_no_available(mock_socket_class):
+    """Test find_available_port when no ports available."""
+    mock_socket = MagicMock()
+    mock_socket.__enter__.return_value = mock_socket
+    mock_socket.__exit__.return_value = None
+    mock_socket.bind.side_effect = OSError("Address already in use")
+    mock_socket_class.return_value = mock_socket
+
+    with pytest.raises(RuntimeError, match="No available ports found"):
+        NetworkValidator.find_available_port("127.0.0.1", 9000)

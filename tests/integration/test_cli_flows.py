@@ -86,7 +86,7 @@ def test_cli_new_interactive_prompts(cli_runner):
         result = cli_runner.invoke(
             main,
             ["new"],
-            input="14\n2.8.0\n5432\nn\nlocalhost\n",
+            input="14\n2.8.0\nn\nlocalhost\n",
         )
         assert result.exit_code == 0
         assert mock_build.called
