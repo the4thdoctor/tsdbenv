@@ -250,7 +250,7 @@ Connection Info:
 - Password: {container.tsdbadmin_password}
 
 Connect:
-  psql -h {container.bind_ip} -U tsdbadmin -d tsdb
+  PGPASSWORD={container.tsdbadmin_password} psql -h {container.bind_ip} -U tsdbadmin -d tsdb
 """)
 
 
