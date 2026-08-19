@@ -31,24 +31,30 @@ def test_cli_list_empty(cli_runner):
 
 def test_cli_new_with_flags(cli_runner):
     """Test creating container with flags."""
-    result = cli_runner.invoke(
-        main,
-        [
-            "new",
-            "--postgres",
-            "14",
-            "--timescaledb",
-            "2.8.0",
-            "--name",
-            "testdb",
-            "--port",
-            "5432",
-            "--bind-ip",
-            "127.0.0.1",
-        ],
-        input="n\n",
-    )
+    with patch(
+        "tsdbenv.cli.cli_state.docker_client.create_container"
+    ) as mock_docker, patch("tsdbenv.cli.cli_state.state_tracker.save_container"):
+        mock_docker.return_value = "container-123"
+
+        result = cli_runner.invoke(
+            main,
+            [
+                "new",
+                "--postgres",
+                "14",
+                "--timescaledb",
+                "2.8.0",
+                "--name",
+                "testdb",
+                "--port",
+                "5432",
+                "--bind-ip",
+                "127.0.0.1",
+            ],
+            input="n\n",
+        )
     assert result.exit_code == 0 or "created successfully" in result.output
+    assert mock_docker.called
 
 
 def test_cli_remove_not_found(cli_runner):

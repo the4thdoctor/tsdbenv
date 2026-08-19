@@ -1,56 +1,141 @@
 # Author: Wagner Bianchi <wagnerbianchijr@gmail.com>
 # Created: 2026-08-19
 
-import shutil
+import time
 from typing import Dict, List, Optional
+
+import docker
+import docker.errors
 
 
 class DockerClient:
-    """Wrapper around Docker SDK (stubs for Phase 2)."""
+    """Wrapper around Docker SDK for container lifecycle management."""
 
-    def __init__(self):
-        """Initialize Docker client."""
+    def __init__(self) -> None:
+        """Initialize Docker client from environment."""
+        self.client = docker.from_env()
         self._verify_docker()
 
     def check_docker_installed(self) -> bool:
-        """Check if Docker is installed and running."""
-        return shutil.which("docker") is not None
+        """Check if Docker daemon is running and accessible."""
+        try:
+            self.client.ping()
+            return True
+        except Exception:
+            return False
 
     def _verify_docker(self) -> None:
-        """Verify Docker is installed. Raise if not."""
+        """Verify Docker is running; raise RuntimeError if not."""
         if not self.check_docker_installed():
-            raise RuntimeError(
-                "Docker is not installed or not in PATH. "
-                "Please install Docker: https://docs.docker.com/get-docker/"
-            )
+            raise RuntimeError("Docker daemon is not running or not accessible")
 
     def create_container(
         self,
         image: str,
         name: str,
         environment: Optional[Dict[str, str]] = None,
-        ports: Optional[Dict[str, int]] = None,
-        volumes: Optional[Dict[str, Dict]] = None,
+        ports: Optional[Dict[int, int]] = None,
+        volumes: Optional[Dict] = None,
     ) -> str:
-        """Create a Docker container (STUB for Phase 2)."""
-        return f"mock_{name}_id_12345"
+        """Create and start a PostgreSQL + TimescaleDB container.
+
+        Args:
+            image: Docker image name (e.g., "postgres:14-alpine")
+            name: Container name
+            environment: Environment variables dict
+            ports: Port mapping {internal: external} (e.g., {5432: 5432})
+            volumes: Volume mounts (optional)
+
+        Returns:
+            Container ID (short or long hash)
+
+        Raises:
+            docker.errors.APIError: If port is already in use or other Docker errors
+        """
+        try:
+            container = self.client.containers.run(
+                image,
+                name=name,
+                environment=environment or {},
+                ports=ports or {},
+                volumes=volumes or {},
+                detach=True,
+                remove=False,  # Keep container even if stopped
+                hostname=name,
+            )
+            # Wait for PostgreSQL to be ready
+            self.wait_for_postgres(container.id)
+            return container.id
+        except docker.errors.APIError as e:
+            if "Address already in use" in str(e):
+                raise docker.errors.APIError(
+                    "Port already in use; try a different port"
+                )
+            raise
 
     def start_container(self, container_id: str) -> None:
-        """Start a container (STUB for Phase 2)."""
-        pass
+        """Start a stopped container."""
+        container = self.client.containers.get(container_id)
+        container.start()
 
     def stop_container(self, container_id: str) -> None:
-        """Stop a container (STUB for Phase 2)."""
-        pass
+        """Gracefully stop a running container."""
+        container = self.client.containers.get(container_id)
+        container.stop(timeout=10)
 
     def remove_container(self, container_id: str) -> None:
-        """Remove a container (STUB for Phase 2)."""
-        pass
+        """Remove a container (stop first if running)."""
+        container = self.client.containers.get(container_id)
+        if container.status in ["running", "paused"]:
+            container.stop(timeout=10)
+        container.remove(force=True)
 
     def get_container_logs(self, container_id: str) -> str:
-        """Get container logs (STUB for Phase 2)."""
-        return "[Mock logs] Container is running successfully."
+        """Get container logs (stdout/stderr)."""
+        container = self.client.containers.get(container_id)
+        return container.logs(stdout=True, stderr=True).decode("utf-8")
 
     def list_containers(self) -> List[Dict]:
-        """List all containers (STUB for Phase 2)."""
-        return []
+        """List all containers (running + stopped).
+
+        Returns:
+            List of dicts: [{'id': ..., 'name': ..., 'status': ..., 'ports': ...}, ...]
+        """
+        containers = self.client.containers.list(all=True)
+        result = []
+        for c in containers:
+            result.append(
+                {
+                    "id": c.id,
+                    "name": c.name,
+                    "status": c.status,
+                    "ports": c.ports,
+                }
+            )
+        return result
+
+    def wait_for_postgres(self, container_id: str, timeout: int = 30) -> bool:
+        """Wait for PostgreSQL to be ready for connections.
+
+        Polls container logs for "database system is ready" message.
+
+        Args:
+            container_id: Container ID
+            timeout: Max seconds to wait
+
+        Returns:
+            True if ready, False if timeout
+
+        Raises:
+            TimeoutError: If PostgreSQL doesn't start within timeout
+        """
+        start = time.time()
+        while time.time() - start < timeout:
+            try:
+                logs = self.get_container_logs(container_id)
+                if "database system is ready to accept connections" in logs:
+                    return True
+            except Exception:
+                pass
+            time.sleep(1)
+        raise TimeoutError(f"PostgreSQL not ready after {timeout}s")
