@@ -46,10 +46,11 @@ def main(ctx, version):
 @click.option("--postgres", help="PostgreSQL version (e.g., 14)")
 @click.option("--timescaledb", help="TimescaleDB version (e.g., 2.8.0)")
 @click.option("--name", help="Container name")
+@click.option("--port", type=int, default=None, help="PostgreSQL port (default: 5432)")
 @click.option("--config", type=click.Path(exists=True), help="PostgreSQL config file path")
 @click.option("--bind-ip", help="IP to bind container to (default: 127.0.0.1)")
 @click.option("--force", is_flag=True, help="Override version compatibility check")
-def new(postgres, timescaledb, name, config, bind_ip, force):
+def new(postgres, timescaledb, name, port, config, bind_ip, force):
     """Create a new PostgreSQL + TimescaleDB container."""
     if not postgres:
         postgres = click.prompt("PostgreSQL version", type=str)
@@ -62,6 +63,9 @@ def new(postgres, timescaledb, name, config, bind_ip, force):
 
     if not name:
         name = click.prompt("Container name", type=str)
+
+    if port is None:
+        port = click.prompt("PostgreSQL port", type=int, default=5432)
 
     postgres_config = None
     if not config:
@@ -99,7 +103,7 @@ def new(postgres, timescaledb, name, config, bind_ip, force):
         image=f"postgres:{postgres}-alpine",
         name=name,
         environment={"POSTGRES_PASSWORD": "postgres", "PGPASSWORD": tsdbadmin_password},
-        ports={5432: 5432},
+        ports={5432: port},
     )
 
     container = Container(
@@ -110,7 +114,7 @@ def new(postgres, timescaledb, name, config, bind_ip, force):
         last_accessed_at=datetime.now(),
         config_path=config,
         docker_id=container_id,
-        port=5432,
+        port=port,
         bind_ip=bind_ip,
         tsdbadmin_password=tsdbadmin_password,
     )
