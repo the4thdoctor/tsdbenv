@@ -80,10 +80,6 @@ def new(postgres, timescaledb, port, config, bind_ip, force):
     timestamp_hash = hashlib.md5(str(datetime.now()).encode()).hexdigest()[:8]
     name = f"tsdb-{timestamp_hash}"
 
-    if not config:
-        if click.confirm("Load PostgreSQL config file?"):
-            config = click.prompt("Config file path", type=click.Path(exists=True))
-
     if config:
         try:
             ConfigHandler.parse_file(Path(config))
@@ -91,18 +87,9 @@ def new(postgres, timescaledb, port, config, bind_ip, force):
             click.echo(f"❌ Failed to parse config: {e}")
             return
 
+    # Default bind_ip to localhost if not specified
     if not bind_ip:
-        bind_choice = click.prompt(
-            "Network binding",
-            type=click.Choice(["localhost", "custom"]),
-            default="localhost",
-        )
-        if bind_choice == "localhost":
-            bind_ip = "127.0.0.1"
-        else:
-            detected_ips = NetworkValidator.get_local_ips()
-            click.echo(f"Detected IPs: {', '.join(detected_ips)}")
-            bind_ip = click.prompt("Enter IP or select from above", type=str)
+        bind_ip = "127.0.0.1"
 
     is_valid, warning = NetworkValidator.validate_bind_ip(bind_ip)
     if not is_valid:
