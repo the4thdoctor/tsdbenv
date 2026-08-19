@@ -134,6 +134,7 @@ def new(postgres, timescaledb, name, port, config, bind_ip, force):
         environment={"POSTGRES_PASSWORD": "postgres", "PGPASSWORD": tsdbadmin_password},
         ports={5432: port},
         tsdbadmin_password=tsdbadmin_password,
+        bind_ip=bind_ip,
     )
 
     container = Container(

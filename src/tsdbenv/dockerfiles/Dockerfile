@@ -4,15 +4,13 @@
 
 ARG PG_VERSION=14
 
-FROM postgres:${PG_VERSION}-alpine
+FROM timescale/timescaledb:latest-pg${PG_VERSION}-oss
 
-# Install PostgreSQL contrib modules with TimescaleDB extension support
-RUN apk add --no-cache postgresql-contrib timescaledb-postgresql-14 && \
-    echo "shared_preload_libraries = 'timescaledb'" >> /usr/local/share/postgresql/postgresql.conf.sample
+# TimescaleDB extension is pre-configured in the base image
+# Verify TimescaleDB is in shared_preload_libraries (already set by base image)
 
 # Set environment variables for postgres user
 ENV POSTGRES_USER=postgres
-ENV POSTGRES_HOST_AUTH_METHOD=trust
 
 # Expose PostgreSQL port
 EXPOSE 5432

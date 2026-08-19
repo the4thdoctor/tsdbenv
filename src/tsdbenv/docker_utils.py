@@ -68,6 +68,7 @@ class DockerClient:
         ports: Optional[Dict[int, int]] = None,
         volumes: Optional[Dict] = None,
         tsdbadmin_password: Optional[str] = None,
+        bind_ip: Optional[str] = None,
     ) -> str:
         """Create and start a PostgreSQL + TimescaleDB container.
 
@@ -78,6 +79,7 @@ class DockerClient:
             ports: Port mapping {internal: external} (e.g., {5432: 5432})
             volumes: Volume mounts (optional)
             tsdbadmin_password: Password for tsdbadmin user (optional)
+            bind_ip: IP address to bind container to (default: 127.0.0.1 for security)
 
         Returns:
             Container ID (short or long hash)
@@ -90,11 +92,20 @@ class DockerClient:
             if tsdbadmin_password:
                 env["TSDBADMIN_PASSWORD"] = tsdbadmin_password
 
+            # Secure port binding: default to localhost only if not specified
+            bind_ip = bind_ip or "127.0.0.1"
+
+            # Convert ports dict to Docker SDK format: {internal: (bind_ip, external)}
+            docker_ports = {}
+            if ports:
+                for internal_port, external_port in ports.items():
+                    docker_ports[f"{internal_port}/tcp"] = (bind_ip, external_port)
+
             container = self.client.containers.run(
                 image,
                 name=name,
                 environment=env,
-                ports=ports or {},
+                ports=docker_ports or {},
                 volumes=volumes or {},
                 detach=True,
                 remove=False,  # Keep container even if stopped
