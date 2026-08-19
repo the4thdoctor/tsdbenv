@@ -2,6 +2,7 @@
 # Created: 2026-08-19
 
 import time
+from pathlib import Path
 from typing import Dict, List, Optional
 
 import docker
@@ -29,6 +30,36 @@ class DockerClient:
         if not self.check_docker_installed():
             raise RuntimeError("Docker daemon is not running or not accessible")
 
+    def build_image(
+        self,
+        dockerfile_dir: str,
+        tag: str,
+        build_args: Optional[Dict[str, str]] = None,
+    ) -> str:
+        """Build a Docker image from a Dockerfile.
+
+        Args:
+            dockerfile_dir: Directory containing Dockerfile
+            tag: Image tag (e.g., "myapp:1.0")
+            build_args: Build arguments passed to docker build (optional)
+
+        Returns:
+            Image ID
+
+        Raises:
+            docker.errors.BuildError: If build fails
+        """
+        try:
+            image, build_logs = self.client.images.build(
+                path=dockerfile_dir,
+                tag=tag,
+                buildargs=build_args or {},
+                rm=True,  # Remove intermediate containers
+            )
+            return image.id
+        except docker.errors.BuildError as e:
+            raise docker.errors.BuildError(f"Docker build failed: {e}")
+
     def create_container(
         self,
         image: str,
@@ -36,6 +67,7 @@ class DockerClient:
         environment: Optional[Dict[str, str]] = None,
         ports: Optional[Dict[int, int]] = None,
         volumes: Optional[Dict] = None,
+        tsdbadmin_password: Optional[str] = None,
     ) -> str:
         """Create and start a PostgreSQL + TimescaleDB container.
 
@@ -45,6 +77,7 @@ class DockerClient:
             environment: Environment variables dict
             ports: Port mapping {internal: external} (e.g., {5432: 5432})
             volumes: Volume mounts (optional)
+            tsdbadmin_password: Password for tsdbadmin user (optional)
 
         Returns:
             Container ID (short or long hash)
@@ -53,10 +86,14 @@ class DockerClient:
             docker.errors.APIError: If port is already in use or other Docker errors
         """
         try:
+            env = environment or {}
+            if tsdbadmin_password:
+                env["TSDBADMIN_PASSWORD"] = tsdbadmin_password
+
             container = self.client.containers.run(
                 image,
                 name=name,
-                environment=environment or {},
+                environment=env,
                 ports=ports or {},
                 volumes=volumes or {},
                 detach=True,
