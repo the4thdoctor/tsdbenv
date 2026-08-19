@@ -53,11 +53,11 @@ python -m tsdbenv.cli               # Main CLI entry point
 ```
 src/tsdbenv/
 ├── cli.py                  - Entry point, user interaction prompts
-├── version_matrix.py       - PostgreSQL/TimescaleDB compatibility data & validation
-├── container_manager.py    - Docker container operations (create, list, logs, stop)
+├── version_manager.py      - PostgreSQL/TimescaleDB compatibility data & validation
 ├── config_handler.py       - PostgreSQL config parsing & application
 ├── state_tracker.py        - Container access tracking & stale detection
 ├── docker_utils.py         - Docker SDK wrapper utilities
+├── network_validator.py    - Network configuration validation
 └── models.py               - Data classes for containers, versions, configs
 
 tests/
@@ -131,7 +131,7 @@ tests/
   # Author: Wagner Bianchi <wagnerbianchijr@gmail.com>
   # Created: YYYY-MM-DD
   ```
-- **Git Commits**: All commits signed as Wagner Bianchi <wagnerbianchijr@gmail.com>
+- **Git Commits**: All commits signed as Wagner Bianchi <wagnerbianchijr@gmail.com>; work commits directly to main branch
 
 ## Testing Strategy
 

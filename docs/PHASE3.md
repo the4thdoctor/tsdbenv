@@ -46,7 +46,7 @@ Containers are built from a `Dockerfile` located at the repository root. The Doc
 **Execution**:
 - Container runs initialization script on startup
 - Script creates tsdbadmin user, sets password, configures PostgreSQL
-- Health checks verify PostgreSQL readiness (pg_isready)
+- Readiness verification via log polling ("database system is ready to accept connections")
 - Container logs captured to `./tsdbenv_logs/<container_name>/`
 
 **Cleanup**:
@@ -77,14 +77,14 @@ Core Docker operations:
 - `get_logs()`: Stream container logs
 - `execute_command()`: Run commands inside container (admin operations)
 
-### container_manager.py
+### Container Orchestration
 
-High-level container orchestration:
-- Coordinates version validation, image building, container creation
-- Manages container state and access timestamps
-- Enforces user prompts (new vs. replace existing)
-- Handles orphaned container cleanup
-- Provides container listing with metadata
+High-level container orchestration (in cli.py and docker_utils.py):
+- Version validation, image building, container creation
+- Container state and access timestamp management
+- User prompts (new vs. replace existing)
+- Orphaned container cleanup
+- Container listing with metadata
 
 ### models.py
 
@@ -112,13 +112,13 @@ Secure tsdbadmin password management:
 - Stored securely in container state file (encrypted option available)
 - Never logged or exposed in plain text
 
-### Health Checks
+### Readiness Verification
 
-Container readiness verification:
-- `pg_isready` probe every 5 seconds
+Container startup verification via log polling:
+- Poll container logs for "database system is ready to accept connections"
 - Timeout: 30 seconds maximum wait
-- Startup grace period: 10 seconds before health checks begin
-- Unhealthy container detection and alerting
+- Graceful retry mechanism for transient startup failures
+- Provides clear feedback on initialization success
 
 ### Image Tagging
 
@@ -142,9 +142,11 @@ Persistent container metadata:
 
 Located in `tests/unit/`:
 - `test_docker_utils.py`: Mock Docker SDK, test all docker_utils functions
-- `test_container_manager.py`: Mock docker_utils, test orchestration logic
-- `test_version_matrix.py`: Validate version compatibility matrix
+- `test_version_manager.py`: Validate version compatibility matrix
 - `test_models.py`: Validate data class constraints
+- `test_state_tracker.py`: Test state file I/O and stale detection
+- `test_config_handler.py`: Test PostgreSQL config parsing
+- `test_network_validator.py`: Test network configuration validation
 - Mocking strategy: pytest-mock + unittest.mock for Docker SDK
 
 **Mock Strategy**:
@@ -157,9 +159,8 @@ Located in `tests/unit/`:
 
 Located in `tests/integration/`:
 - `test_container_lifecycle.py`: Full end-to-end workflow with real Docker
-- `test_image_building.py`: Build real images, verify layer structure
-- `test_password_handling.py`: Create container, verify password works
-- `test_health_checks.py`: Verify container readiness via health probes
+- `test_docker_real.py`: Build real images, verify container operations
+- `test_cli_flows.py`: Test CLI user interaction flows
 - Prerequisites: Docker daemon running, at least 2GB free disk space
 - Cleanup: All test containers removed after test completion
 
@@ -173,11 +174,11 @@ Located in `tests/integration/`:
 
 **Target**: 80%+ coverage on core modules
 - `docker_utils.py`: 85%+ (all Docker operations)
-- `container_manager.py`: 82%+ (orchestration logic)
-- `version_matrix.py`: 90%+ (compatibility validation)
+- `version_manager.py`: 90%+ (compatibility validation)
 - `models.py`: 88%+ (data validation)
 - `config_handler.py`: 75%+ (configuration parsing)
 - `state_tracker.py`: 78%+ (state file I/O)
+- `network_validator.py`: 85%+ (network configuration)
 
 **Coverage Run**:
 ```bash
@@ -260,7 +261,6 @@ Generates HTML report in `htmlcov/index.html` with per-file and per-function bre
 - [CLAUDE.md](../CLAUDE.md) — Project overview and architecture
 - [Dockerfile](../Dockerfile) — Container image definition
 - [docker_utils.py](../src/tsdbenv/docker_utils.py) — Docker SDK wrapper
-- [container_manager.py](../src/tsdbenv/container_manager.py) — Orchestration logic
 
 **Author**: Wagner Bianchi <wagnerbianchijr@gmail.com>
 **Created**: 2026-08-19
