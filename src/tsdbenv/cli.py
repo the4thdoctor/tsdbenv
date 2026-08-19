@@ -229,17 +229,12 @@ def remove(container_name):
 
 def display_connection_info(container: Container) -> None:
     """Display connection information to the user."""
+    connection_string = f"postgresql://tsdbadmin:{container.tsdbadmin_password}@{container.bind_ip}:{container.port}/tsdb"
     click.echo(f"""
 ✅ Container '{container.name}' created successfully!
 
-Connection Info:
-- Host: {container.bind_ip}
-- Port: {container.port}
-- App User: tsdbadmin
-- Password: {container.tsdbadmin_password}
-
 Connect:
-  PGPASSWORD={container.tsdbadmin_password} psql -h {container.bind_ip} -U tsdbadmin -d tsdb
+  psql "{connection_string}"
 """)
 
 
