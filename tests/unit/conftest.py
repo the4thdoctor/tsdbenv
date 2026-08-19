@@ -2,7 +2,9 @@
 # Created: 2026-08-19
 
 import pytest
+import tempfile
 from datetime import datetime
+from pathlib import Path
 from tsdbenv.models import Container, VersionMatrix, PostgresConfig
 
 @pytest.fixture
@@ -40,3 +42,9 @@ def sample_postgres_config():
         source_file=None,
         is_valid=True,
     )
+
+@pytest.fixture
+def temp_state_dir():
+    """Temporary directory for test files."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        yield Path(tmpdir)
