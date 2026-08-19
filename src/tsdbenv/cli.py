@@ -80,9 +80,6 @@ def new(postgres, timescaledb, port, config, bind_ip, force):
     timestamp_hash = hashlib.md5(str(datetime.now()).encode()).hexdigest()[:8]
     name = f"tsdb-{timestamp_hash}"
 
-    if port is None:
-        port = click.prompt("PostgreSQL port", type=int, default=5432)
-
     if not config:
         if click.confirm("Load PostgreSQL config file?"):
             config = click.prompt("Config file path", type=click.Path(exists=True))
@@ -112,6 +109,11 @@ def new(postgres, timescaledb, port, config, bind_ip, force):
         click.echo(warning)
         if not click.confirm("Continue anyway?"):
             return
+
+    # Auto-find available port if not specified
+    if port is None:
+        port = NetworkValidator.find_available_port(bind_ip)
+        click.echo(f"✅ Using port {port} (first available)")
 
     tsdbadmin_password = generate_password()
 

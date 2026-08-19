@@ -78,3 +78,15 @@ class NetworkValidator:
             return (False, warning)
 
         return (True, None)
+
+    @staticmethod
+    def find_available_port(bind_ip: str = "127.0.0.1", start_port: int = 5432) -> int:
+        """Find first available port starting from start_port."""
+        for port in range(start_port, start_port + 100):
+            try:
+                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                    s.bind((bind_ip, port))
+                    return port
+            except OSError:
+                continue
+        raise RuntimeError(f"No available ports found starting from {start_port}")
