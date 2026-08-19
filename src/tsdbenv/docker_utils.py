@@ -133,10 +133,13 @@ class DockerClient:
 
     def remove_container(self, container_id: str) -> None:
         """Remove a container (stop first if running)."""
-        container = self.client.containers.get(container_id)
-        if container.status in ["running", "paused"]:
-            container.stop(timeout=10)
-        container.remove(force=True)
+        try:
+            container = self.client.containers.get(container_id)
+            if container.status in ["running", "paused"]:
+                container.stop(timeout=10)
+            container.remove(force=True)
+        except docker.errors.NotFound:
+            pass
 
     def get_container_logs(self, container_id: str) -> str:
         """Get container logs (stdout/stderr)."""
