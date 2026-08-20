@@ -146,7 +146,9 @@ def test_remove_container_already_stopped(mock_client):
 def test_remove_container_not_found(mock_client):
     """Test removing a container that no longer exists in Docker."""
     client = DockerClient()
-    mock_client.containers.get.side_effect = docker.errors.NotFound("Container not found")
+    mock_client.containers.get.side_effect = docker.errors.NotFound(
+        "Container not found"
+    )
 
     # Should not raise an exception
     client.remove_container("nonexistent")
@@ -206,3 +208,70 @@ def test_wait_for_postgres_timeout(mock_client):
         with patch("tsdbenv.docker_utils.time.sleep"):
             with pytest.raises(TimeoutError, match="PostgreSQL not ready after"):
                 client.wait_for_postgres("abc123", timeout=1)
+
+
+def test_default_engine_is_docker(mock_client):
+    """With no engine arg or env var, DockerClient talks to Docker."""
+    client = DockerClient()
+    assert client.engine == "docker"
+
+
+def test_engine_from_env_var(monkeypatch, mock_client):
+    monkeypatch.setenv("TSDBENV_ENGINE", "docker")
+    client = DockerClient()
+    assert client.engine == "docker"
+
+
+def test_invalid_engine_raises_value_error():
+    with pytest.raises(ValueError, match="Unknown container engine"):
+        DockerClient(engine="rkt")
+
+
+def test_podman_engine_uses_socket(monkeypatch):
+    """DockerClient(engine='podman') connects via the discovered unix socket."""
+    monkeypatch.setenv("DOCKER_HOST", "unix:///tmp/fake-podman.sock")
+    with patch("tsdbenv.docker_utils.docker.DockerClient") as mock_docker_client:
+        fake_client = MagicMock()
+        fake_client.ping.return_value = True
+        mock_docker_client.return_value = fake_client
+
+        client = DockerClient(engine="podman")
+
+        assert client.engine == "podman"
+        assert client.client is fake_client
+        mock_docker_client.assert_called_once_with(
+            base_url="unix:///tmp/fake-podman.sock"
+        )
+
+
+def test_podman_prefers_container_host_over_docker_host(monkeypatch):
+    monkeypatch.setenv("DOCKER_HOST", "unix:///tmp/docker.sock")
+    monkeypatch.setenv("CONTAINER_HOST", "unix:///tmp/podman.sock")
+    with patch("tsdbenv.docker_utils.docker.DockerClient") as mock_docker_client:
+        fake_client = MagicMock()
+        fake_client.ping.return_value = True
+        mock_docker_client.return_value = fake_client
+
+        DockerClient(engine="podman")
+
+        mock_docker_client.assert_called_once_with(base_url="unix:///tmp/podman.sock")
+
+
+def test_podman_socket_not_found_raises_runtime_error(monkeypatch):
+    monkeypatch.delenv("DOCKER_HOST", raising=False)
+    monkeypatch.delenv("CONTAINER_HOST", raising=False)
+    monkeypatch.delenv("XDG_RUNTIME_DIR", raising=False)
+    with patch("tsdbenv.docker_utils.Path.exists", return_value=False):
+        with pytest.raises(RuntimeError, match="Podman socket not found"):
+            DockerClient(engine="podman")
+
+
+def test_podman_daemon_unreachable_raises_runtime_error(monkeypatch):
+    monkeypatch.setenv("DOCKER_HOST", "unix:///tmp/fake-podman.sock")
+    with patch("tsdbenv.docker_utils.docker.DockerClient") as mock_docker_client:
+        fake_client = MagicMock()
+        fake_client.ping.side_effect = Exception("connection refused")
+        mock_docker_client.return_value = fake_client
+
+        with pytest.raises(RuntimeError, match="Podman daemon is not running"):
+            DockerClient(engine="podman")

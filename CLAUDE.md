@@ -71,6 +71,12 @@ tests/
 - On first run, check if Docker daemon is running; prompt user to install/start Docker if missing
 - Always use bridge networking mode for containers
 
+**Container Engine (Docker/Podman)**:
+- `DockerClient` (in `docker_utils.py`) supports both Docker and Podman, since Podman exposes a Docker-compatible REST API that the `docker` Python SDK can talk to over a unix socket
+- Engine selection is explicit, never auto-detected: `DockerClient(engine=...)` arg → `TSDBENV_ENGINE` env var → default `"docker"`
+- CLI exposes this via the global `--engine {docker,podman}` flag on `tsdbenv`
+- Podman socket discovery order: `$CONTAINER_HOST`/`$DOCKER_HOST` → `$XDG_RUNTIME_DIR/podman/podman.sock` → `/run/user/<uid>/podman/podman.sock` (rootless) → `/run/podman/podman.sock` (rootful)
+
 **Container Lifecycle**:
 - Always ask user: "New container or replace existing?" before any operation to prevent orphaned containers
 - Track last-access timestamp for each container

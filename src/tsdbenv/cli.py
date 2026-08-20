@@ -4,6 +4,7 @@
 import hashlib
 from datetime import datetime
 from pathlib import Path
+from typing import Optional
 
 import click
 
@@ -27,10 +28,18 @@ class CLIState:
         self.state_dir = ensure_state_dir()
         self.state_tracker = StateTracker(state_dir=self.state_dir)
         self.version_manager = VersionManager(cache_dir=self.state_dir)
+        self.docker_client = self._connect_engine()
+
+    @staticmethod
+    def _connect_engine(engine: Optional[str] = None):
         try:
-            self.docker_client = DockerClient()
-        except RuntimeError:
-            self.docker_client = None
+            return DockerClient(engine=engine)
+        except (RuntimeError, ValueError):
+            return None
+
+    def set_engine(self, engine: str) -> None:
+        """Switch container engine (e.g. after a --engine CLI flag)."""
+        self.docker_client = self._connect_engine(engine=engine)
 
 
 cli_state = CLIState()
@@ -38,16 +47,27 @@ cli_state = CLIState()
 
 @click.group(invoke_without_command=True)
 @click.option("--version", is_flag=True, help="Show version and exit")
+@click.option(
+    "--engine",
+    type=click.Choice(["docker", "podman"]),
+    default=None,
+    help="Container engine to use (default: docker, or $TSDBENV_ENGINE)",
+)
 @click.pass_context
-def main(ctx, version):
+def main(ctx, version, engine):
     """tsdbenv - PostgreSQL + TimescaleDB environment manager."""
     if version:
         click.echo(f"tsdbenv {__version__}")
         ctx.exit(0)
 
+    if engine:
+        cli_state.set_engine(engine)
+
     if cli_state.docker_client is None:
         click.echo("❌ Docker is not installed or not running.")
         click.echo("   Please install Docker: https://docs.docker.com/get-docker/")
+        click.echo("   Or install Podman: https://podman.io/docs/installation")
+        click.echo("   Then select it with --engine podman or $TSDBENV_ENGINE=podman")
         ctx.exit(1)
 
     if ctx.invoked_subcommand is None:
@@ -230,12 +250,14 @@ def remove(container_name):
 def display_connection_info(container: Container) -> None:
     """Display connection information to the user."""
     connection_string = f"postgresql://tsdbadmin:{container.tsdbadmin_password}@{container.bind_ip}:{container.port}/tsdb"
-    click.echo(f"""
+    click.echo(
+        f"""
 ✅ Container '{container.name}' created successfully!
 
 Connect:
   psql "{connection_string}"
-""")
+"""
+    )
 
 
 def show_interactive_menu() -> None:

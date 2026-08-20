@@ -28,11 +28,10 @@ fi
 # Create installation directory
 mkdir -p "$INSTALL_DIR"
 
-# Clone or update repository
+# Clone repository if not already present
 if [ -d "$INSTALL_DIR/repo" ]; then
-    echo "📦 Updating tsdbenv..."
+    echo "📦 Repository already present, skipping fetch..."
     cd "$INSTALL_DIR/repo"
-    git pull origin main
 else
     echo "📦 Cloning tsdbenv repository..."
     git clone "$REPO_URL" "$INSTALL_DIR/repo"

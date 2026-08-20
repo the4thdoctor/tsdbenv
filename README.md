@@ -1,14 +1,14 @@
 # tsdbenv
 
-PostgreSQL + TimescaleDB environment manager via Docker. Spin up isolated local database environments with one command.
+PostgreSQL + TimescaleDB environment manager via Docker or Podman. Spin up isolated local database environments with one command.
 
 ## Overview
 
-**tsdbenv** simplifies local PostgreSQL + TimescaleDB development by automating container setup. Provide versions → validate compatibility → build and run isolated Docker containers with persistent state, automatic port assignment, and easy access to logs. Includes all Tiger Cloud extensions (TimescaleDB, pgvector, postgres_fdw, and more).
+**tsdbenv** simplifies local PostgreSQL + TimescaleDB development by automating container setup. Provide versions → validate compatibility → build and run isolated containers with persistent state, automatic port assignment, and easy access to logs. Includes all Tiger Cloud extensions (TimescaleDB, pgvector, postgres_fdw, and more).
 
 ## Requirements
 
-- **Docker** (installed and running)
+- **Docker** (installed and running) **or Podman** (installed and running) — see [Container Engine](#container-engine)
 - **Python 3.8+**
 - **Git** (for installer script)
 
@@ -108,6 +108,32 @@ tsdbenv remove tsdb-04d30960
 
 Confirmation required. Gracefully handles containers no longer in Docker.
 
+## Container Engine
+
+tsdbenv talks to Docker by default, since Podman exposes a Docker-compatible API that the same client speaks natively. Switch engines with the `--engine` flag or the `TSDBENV_ENGINE` environment variable:
+
+```bash
+tsdbenv --engine podman new --postgres 14 --timescaledb 2.10.0
+
+# or persist the choice for the session:
+export TSDBENV_ENGINE=podman
+tsdbenv new --postgres 14 --timescaledb 2.10.0
+```
+
+For rootless Podman, make sure the API socket is running:
+
+```bash
+systemctl --user enable --now podman.socket
+```
+
+For rootful Podman, or if you don't use systemd:
+
+```bash
+podman system service --time=0 unix:///run/podman/podman.sock
+```
+
+tsdbenv looks for the socket via `$DOCKER_HOST`/`$CONTAINER_HOST`, then falls back to the standard rootless (`/run/user/<uid>/podman/podman.sock`) and rootful (`/run/podman/podman.sock`) paths.
+
 ## Connection
 
 All containers include a `tsdbadmin` superuser with a secure generated password.
@@ -194,14 +220,14 @@ tsdbenv remove tsdb-04d30960
 **Core Layers:**
 1. **CLI** — User-facing commands via Click framework
 2. **Version Manager** — PostgreSQL × TimescaleDB compatibility validation
-3. **Docker Utils** — Python Docker SDK wrapper for container lifecycle
+3. **Docker Utils** — Python Docker SDK wrapper for container lifecycle (Docker or Podman)
 4. **Network Validator** — IP binding and port availability detection
 5. **State Tracker** — Local container metadata persistence
 6. **Config Handler** — PostgreSQL config parsing and application
 
 **Container Details:**
 - Base image: `timescale/timescaledb:latest-pgXX-oss` (official TimescaleDB)
-- Networking: Docker bridge mode
+- Networking: Docker/Podman bridge mode
 - Storage: Anonymous volumes (data lost on removal)
 - Health check: PostgreSQL readiness polling
 
@@ -273,6 +299,8 @@ open /Applications/Docker.app
 
 # Or use Docker Desktop from https://www.docker.com/products/docker-desktop
 ```
+
+No Docker available? Use Podman instead — see [Container Engine](#container-engine).
 
 ### "Port already in use"
 
