@@ -14,7 +14,7 @@ from tsdbenv import __version__
 
 # Preprocess argv to expand short aliases before Click parses
 def _expand_short_aliases():
-    """Expand -n, -l, -c, -g, -m to full command names."""
+    """Expand -n, -l, -c, -g, -m, -a to full command names."""
     if len(sys.argv) > 1:
         # Special cases (before general aliases mapping)
         if sys.argv[1] == "-g":
@@ -22,6 +22,9 @@ def _expand_short_aliases():
             return
         if sys.argv[1] == "-m":
             sys.argv[1] = "matrix"
+            return
+        if sys.argv[1] == "-a":
+            sys.argv[1] = "removeall"
             return
         aliases = {"-n": "new", "-l": "list", "-r": "remove", "-c": "connectstring"}
         if sys.argv[1] in aliases:
@@ -293,7 +296,8 @@ def remove(container_name):
 
 
 @main.command("removeall")
-def removeall():
+@click.option("--force", is_flag=True, help="Skip confirmation prompt")
+def removeall(force):
     """Remove all containers."""
     containers = cli_state.state_tracker.load_containers()
     if not containers:
@@ -304,7 +308,7 @@ def removeall():
     for c in containers:
         click.echo(f"  - {c.name} (PG {c.postgres_version}, TSDB {c.timescaledb_version})")
 
-    if not click.confirm("Remove all containers?"):
+    if not force and not click.confirm("Remove all containers?"):
         click.echo("Aborted.")
         return
 

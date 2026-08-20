@@ -116,9 +116,21 @@ Remove all containers at once.
 
 ```bash
 tsdbenv removeall
+tsdbenv -a
 ```
 
 Lists all containers and prompts for confirmation before removing. Useful for cleaning up after testing.
+
+**Options:**
+- `--force` — Skip confirmation prompt (dangerous, use with care)
+
+```bash
+# With confirmation (default)
+tsdbenv -a
+
+# Skip confirmation (requires --force)
+tsdbenv removeall --force
+```
 
 ### connectstring
 Get psql command for a container.
@@ -156,6 +168,7 @@ tsdbenv -n --postgres 15 --timescaledb 2.10.0    # new
 tsdbenv -l                                        # list
 tsdbenv -r tsdb-04d30960                          # remove
 tsdbenv -c tsdb-04d30960                          # connectstring
+tsdbenv -a                                        # removeall (with confirmation)
 tsdbenv -g                                        # versionrefresh (get versions)
 tsdbenv -m                                        # matrix
 tsdbenv -v                                        # version
