@@ -103,21 +103,8 @@ def init_cli_state(engine: Engine) -> None:
         raise click.Abort()
 
 
-@click.group(context_settings={"help_option_names": ["-h", "--help"]}, invoke_without_command=True)
-@click.option("-v", "--version", is_flag=True, help="Show version and exit")
-@click.pass_context
-def main(ctx, version):
-    """tsdbenv - PostgreSQL + TimescaleDB environment manager."""
-    if version:
-        click.echo(f"tsdbenv {__version__}")
-        ctx.exit(0)
-    if ctx.invoked_subcommand is None:
-        ctx.invoke(show_help)
-
-
-@main.command()
-def show_help():
-    """Show help message."""
+def _show_help():
+    """Display help message."""
     click.echo("tsdbenv - PostgreSQL + TimescaleDB environment manager")
     click.echo("")
     click.echo("Usage: tsdbenv [OPTIONS] COMMAND [ARGS]...")
@@ -133,6 +120,18 @@ def show_help():
     click.echo("Examples:")
     click.echo("  tsdbenv docker new --postgres 16 --timescaledb 2.29.2")
     click.echo("  tsdbenv podman list")
+
+
+@click.group(context_settings={"help_option_names": ["-h", "--help"]}, invoke_without_command=True)
+@click.option("-v", "--version", is_flag=True, help="Show version and exit")
+@click.pass_context
+def main(ctx, version):
+    """tsdbenv - PostgreSQL + TimescaleDB environment manager."""
+    if version:
+        click.echo(f"tsdbenv {__version__}")
+        ctx.exit(0)
+    if ctx.invoked_subcommand is None:
+        _show_help()
 
 
 def create_engine_group(engine: Engine) -> click.Group:
