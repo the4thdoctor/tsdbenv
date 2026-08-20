@@ -14,11 +14,11 @@ from tsdbenv.engine_config import Engine, get_engine_from_cli_or_env
 
 
 def _expand_short_aliases():
-    """Expand -n, -l, -c, -g, -m, -a to full command names."""
+    """Expand -n, -l, -c, -g, -m, -a, -t to full command names."""
     if len(sys.argv) <= 1:
         return
 
-    aliases = {"-n": "new", "-l": "list", "-r": "remove", "-c": "connectstring", "-g": "versionrefresh", "-m": "matrix", "-a": "removeall"}
+    aliases = {"-n": "new", "-l": "list", "-r": "remove", "-c": "connectstring", "-g": "versionrefresh", "-m": "matrix", "-a": "removeall", "-t": "tablespaces"}
 
     # Find the first positional argument (command) - skip option names and their values
     i = 1
@@ -42,12 +42,6 @@ def _expand_short_aliases():
             break
 
         i += 1
-
-    # Convert -t VALUE to --tablespaces VALUE
-    for i in range(1, len(sys.argv)):
-        if sys.argv[i] == "-t" and i + 1 < len(sys.argv):
-            sys.argv[i] = "--tablespaces"
-            break
 
 
 _expand_short_aliases()
@@ -363,6 +357,46 @@ def connectstring(container_name):
     connection_string = f"postgresql://tsdbadmin:{container.tsdbadmin_password}@{container.bind_ip}:{container.port}/tsdb"
     click.echo(f'psql "{connection_string}"')
     cli_state.state_tracker.mark_accessed(container_name)
+
+
+@main.command("tablespaces")
+@click.argument("container_name", required=False)
+@click.option("--names", help="Comma-separated tablespace names")
+def create_tablespaces(container_name, names):
+    """Create database tablespaces (-t)"""
+    if not container_name:
+        containers = cli_state.state_tracker.load_containers()
+        if not containers:
+            click.echo("No containers found.")
+            return
+        container_name = click.prompt(
+            "Container name", type=click.Choice([c.name for c in containers])
+        )
+
+    container = next(
+        (c for c in cli_state.state_tracker.load_containers() if c.name == container_name),
+        None,
+    )
+    if not container:
+        click.echo(f"Container '{container_name}' not found.")
+        return
+
+    if not names:
+        names = click.prompt("Tablespace names (comma-separated)")
+
+    try:
+        ts_list = [ts.strip() for ts in names.split(",")]
+        click.echo(f"[ACTION] Creating {len(ts_list)} tablespace(s)...")
+        results = cli_state.docker_client.create_tablespaces(container.docker_id, ts_list)
+        successful = sum(1 for v in results.values() if v)
+        click.echo(f"[OK] Created {successful}/{len(ts_list)} tablespace(s)")
+        if successful < len(ts_list):
+            failed = [k for k, v in results.items() if not v]
+            click.echo(f"   [WARNING]  Failed: {', '.join(failed)}")
+        cli_state.state_tracker.mark_accessed(container_name)
+    except Exception as e:
+        click.echo(f"[ERROR] Tablespace creation failed: {e}")
+        raise click.Abort()
 
 
 @main.command("versionrefresh")
