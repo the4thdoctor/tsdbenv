@@ -15,24 +15,39 @@ from tsdbenv.engine_config import Engine, get_engine_from_cli_or_env
 
 def _expand_short_aliases():
     """Expand -n, -l, -c, -g, -m, -a to full command names."""
-    if len(sys.argv) > 1:
-        # Special cases (before general aliases mapping)
-        if sys.argv[1] == "-g":
-            sys.argv[1] = "versionrefresh"
-            return
-        if sys.argv[1] == "-m":
-            sys.argv[1] = "matrix"
-            return
-        if sys.argv[1] == "-a":
-            sys.argv[1] = "removeall"
-            return
-        aliases = {"-n": "new", "-l": "list", "-r": "remove", "-c": "connectstring"}
-        if sys.argv[1] in aliases:
-            sys.argv[1] = aliases[sys.argv[1]]
-        # Convert -t VALUE to --tablespaces VALUE
-        if "-t" in sys.argv and len(sys.argv) > sys.argv.index("-t") + 1:
-            idx = sys.argv.index("-t")
-            sys.argv[idx] = "--tablespaces"
+    if len(sys.argv) <= 1:
+        return
+
+    aliases = {"-n": "new", "-l": "list", "-r": "remove", "-c": "connectstring", "-g": "versionrefresh", "-m": "matrix", "-a": "removeall"}
+
+    # Find the first positional argument (command) - skip option names and their values
+    i = 1
+    while i < len(sys.argv):
+        arg = sys.argv[i]
+
+        # Skip option values
+        if arg in ("--engine", "-e"):
+            i += 2  # Skip the option and its value
+            continue
+
+        # If it starts with - but isn't a known option, it's a short command alias
+        if arg.startswith("-") and not arg.startswith("--"):
+            if arg in aliases:
+                sys.argv[i] = aliases[arg]
+                break
+        elif not arg.startswith("-"):
+            # Found first positional arg (command name), check if it's a short alias
+            if arg in aliases:
+                sys.argv[i] = aliases[arg]
+            break
+
+        i += 1
+
+    # Convert -t VALUE to --tablespaces VALUE
+    for i in range(1, len(sys.argv)):
+        if sys.argv[i] == "-t" and i + 1 < len(sys.argv):
+            sys.argv[i] = "--tablespaces"
+            break
 
 
 _expand_short_aliases()
