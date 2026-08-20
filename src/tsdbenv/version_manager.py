@@ -16,6 +16,7 @@ class VersionManager:
     """Manages PostgreSQL × TimescaleDB compatibility matrix."""
 
     CACHE_FILE = "version_matrix.json"
+    CACHE_MAX_AGE_HOURS = 24
     FALLBACK_MATRIX = {
         "12": ["2.5.0", "2.6.0", "2.7.0"],
         "13": ["2.6.0", "2.7.0", "2.8.0"],
@@ -126,10 +127,23 @@ class VersionManager:
         self.matrix = matrix
         return matrix
 
-    def get_or_fetch(self) -> VersionMatrix:
-        """Get matrix from cache, or fetch if unavailable."""
+    def _is_cache_stale(self, cached: VersionMatrix) -> bool:
+        """Check if cached matrix is older than CACHE_MAX_AGE_HOURS."""
+        if cached.last_fetched is None:
+            return True
+        age = datetime.now() - cached.last_fetched
+        return age.total_seconds() > (self.CACHE_MAX_AGE_HOURS * 3600)
+
+    def get_or_fetch(self, auto_refresh_stale: bool = True) -> VersionMatrix:
+        """Get matrix from cache, or fetch if unavailable or stale.
+
+        Args:
+            auto_refresh_stale: Refresh cache if older than CACHE_MAX_AGE_HOURS
+        """
         cached = self.load_from_cache()
         if cached is not None:
+            if auto_refresh_stale and self._is_cache_stale(cached):
+                return self.refresh()
             return cached
         return self.fetch_from_docker_hub()
 

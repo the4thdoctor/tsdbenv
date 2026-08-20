@@ -464,6 +464,9 @@ def versionrefresh():
 @main.command("matrix")
 def show_matrix():
     """Display compatibility matrix (-m)"""
+    cached = cli_state.version_manager.load_from_cache()
+    if cached and cli_state.version_manager._is_cache_stale(cached):
+        click.echo("[REFRESH] Version cache is outdated, fetching latest...")
     matrix = cli_state.version_manager.get_or_fetch()
     if not matrix.postgres_versions:
         click.echo("[ERROR] No compatibility data available")
