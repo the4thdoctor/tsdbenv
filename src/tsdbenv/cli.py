@@ -2,6 +2,7 @@
 # Created: 2026-08-19
 
 import hashlib
+import os
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
@@ -28,31 +29,52 @@ class CLIState:
         self.state_dir = ensure_state_dir()
         self.state_tracker = StateTracker(state_dir=self.state_dir)
         self.version_manager = VersionManager(cache_dir=self.state_dir)
-        self.docker_client = self._connect_engine()
+        self.docker_client = None
+        self.engine_name = None
+        self.connect_error = None
+        self._connect_engine()
 
-    @staticmethod
-    def _connect_engine(engine: Optional[str] = None):
+    def _connect_engine(self, engine: Optional[str] = None) -> None:
         try:
-            return DockerClient(engine=engine)
-        except (RuntimeError, ValueError):
-            return None
+            self.docker_client = DockerClient(engine=engine)
+            self.engine_name = self.docker_client.engine
+            self.connect_error = None
+        except (RuntimeError, ValueError) as e:
+            self.docker_client = None
+            self.engine_name = (engine or os.environ.get("TSDBENV_ENGINE") or "docker").strip().lower()
+            self.connect_error = str(e)
 
     def set_engine(self, engine: str) -> None:
         """Switch container engine (e.g. after a --engine CLI flag)."""
-        self.docker_client = self._connect_engine(engine=engine)
+        self._connect_engine(engine=engine)
 
 
 cli_state = CLIState()
 
 
+def engine_option(f):
+    """Shared --engine option, usable on the group or on individual subcommands."""
+    return click.option(
+        "--engine",
+        type=click.Choice(["docker", "podman"]),
+        default=None,
+        help="Container engine to use (default: docker, or $TSDBENV_ENGINE)",
+    )(f)
+
+
+def require_engine() -> None:
+    """Abort with a clear, engine-specific error if the container engine isn't reachable."""
+    if cli_state.docker_client is None:
+        click.echo(f"❌ {cli_state.engine_name.capitalize()} is not available: {cli_state.connect_error}")
+        click.echo("   Please install Docker: https://docs.docker.com/get-docker/")
+        click.echo("   Or install Podman: https://podman.io/docs/installation")
+        click.echo("   Select an engine with --engine docker/podman or $TSDBENV_ENGINE")
+        raise click.Abort()
+
+
 @click.group(invoke_without_command=True)
 @click.option("--version", is_flag=True, help="Show version and exit")
-@click.option(
-    "--engine",
-    type=click.Choice(["docker", "podman"]),
-    default=None,
-    help="Container engine to use (default: docker, or $TSDBENV_ENGINE)",
-)
+@engine_option
 @click.pass_context
 def main(ctx, version, engine):
     """tsdbenv - PostgreSQL + TimescaleDB environment manager."""
@@ -63,14 +85,8 @@ def main(ctx, version, engine):
     if engine:
         cli_state.set_engine(engine)
 
-    if cli_state.docker_client is None:
-        click.echo("❌ Docker is not installed or not running.")
-        click.echo("   Please install Docker: https://docs.docker.com/get-docker/")
-        click.echo("   Or install Podman: https://podman.io/docs/installation")
-        click.echo("   Then select it with --engine podman or $TSDBENV_ENGINE=podman")
-        ctx.exit(1)
-
     if ctx.invoked_subcommand is None:
+        require_engine()
         show_interactive_menu()
 
 
@@ -83,8 +99,13 @@ def main(ctx, version, engine):
 )
 @click.option("--bind-ip", help="IP to bind container to (default: 127.0.0.1)")
 @click.option("--force", is_flag=True, help="Override version compatibility check")
-def new(postgres, timescaledb, port, config, bind_ip, force):
+@engine_option
+def new(postgres, timescaledb, port, config, bind_ip, force, engine):
     """Create a new PostgreSQL + TimescaleDB container."""
+    if engine:
+        cli_state.set_engine(engine)
+    require_engine()
+
     if not postgres:
         postgres = click.prompt("PostgreSQL version", type=str)
     if not timescaledb:
@@ -188,8 +209,13 @@ def list():
 
 @main.command()
 @click.argument("container_name", required=False)
-def logs(container_name):
+@engine_option
+def logs(container_name, engine):
     """Show container logs."""
+    if engine:
+        cli_state.set_engine(engine)
+    require_engine()
+
     if not container_name:
         containers = cli_state.state_tracker.load_containers()
         if not containers:
@@ -218,8 +244,13 @@ def logs(container_name):
 
 @main.command()
 @click.argument("container_name", required=False)
-def remove(container_name):
+@engine_option
+def remove(container_name, engine):
     """Remove a container."""
+    if engine:
+        cli_state.set_engine(engine)
+    require_engine()
+
     if not container_name:
         containers = cli_state.state_tracker.load_containers()
         if not containers:
