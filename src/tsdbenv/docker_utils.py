@@ -8,8 +8,7 @@ from typing import Dict, List, Optional
 import docker
 import docker.errors
 
-from tsdbenv.engine_config import (Engine, get_engine_from_cli_or_env,
-                                   get_socket_path)
+from tsdbenv.engine_config import Engine, get_engine_from_cli_or_env, get_socket_path
 
 
 class DockerClient:
