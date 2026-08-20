@@ -80,6 +80,10 @@ def main(ctx, version):
 @click.option("--force", is_flag=True, help="Override version compatibility check")
 def new(postgres, timescaledb, port, config, bind_ip, force):
     """Create a new PostgreSQL + TimescaleDB container."""
+    # Refresh version matrix before creating container
+    click.echo("🔄 Checking for latest TimescaleDB versions...")
+    cli_state.version_manager.refresh()
+
     if not postgres:
         postgres = click.prompt("PostgreSQL version", type=str)
     if not timescaledb:

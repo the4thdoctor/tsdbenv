@@ -2,9 +2,12 @@
 # Created: 2026-08-19
 
 import json
+import re
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
+
+import requests
 
 from tsdbenv.models import VersionMatrix
 
@@ -62,17 +65,65 @@ class VersionManager:
         except (json.JSONDecodeError, KeyError, ValueError):
             return None
 
-    def fetch_from_tigerdata(self) -> VersionMatrix:
-        """Fetch matrix from TigerData docs (stub for now)."""
-        # Phase 3: implement actual fetching from TigerData URL
+    def fetch_from_docker_hub(self) -> VersionMatrix:
+        """Fetch TimescaleDB × PostgreSQL compatibility from Docker Hub."""
+        try:
+            url = "https://registry.hub.docker.com/v2/repositories/timescale/timescaledb/tags/?page_size=300"
+            response = requests.get(url, timeout=5)
+            response.raise_for_status()
+            data = response.json()
+
+            matrix = {}
+            for tag in data.get("results", []):
+                name = tag.get("name", "")
+                # Parse tags like: 2.29.2-pg18, latest-pg16-oss, 2.28.0-pg17
+                match = re.search(r"(\d+\.\d+\.\d+)-pg(\d+)", name)
+                if match:
+                    tsdb_ver, pg_ver = match.groups()
+                    if pg_ver not in matrix:
+                        matrix[pg_ver] = []
+                    if tsdb_ver not in matrix[pg_ver]:
+                        matrix[pg_ver].append(tsdb_ver)
+
+            # Sort versions descending (newest first)
+            for pg_ver in matrix:
+                matrix[pg_ver].sort(reverse=True, key=lambda x: tuple(map(int, x.split("."))))
+
+            # Merge with fallback for older PG versions not in Docker Hub
+            merged_matrix = {**self.FALLBACK_MATRIX, **matrix}
+
+            if matrix:
+                return VersionMatrix(postgres_versions=merged_matrix, last_fetched=datetime.now())
+            return self._fallback_matrix()
+        except (requests.RequestException, json.JSONDecodeError, KeyError):
+            return self._fallback_matrix()
+
+    def _fallback_matrix(self) -> VersionMatrix:
+        """Return fallback matrix when fetch fails."""
         return VersionMatrix(
             postgres_versions=self.FALLBACK_MATRIX,
             last_fetched=datetime.now(),
         )
+
+    def refresh(self) -> VersionMatrix:
+        """Fetch latest matrix from Docker Hub and cache it."""
+        matrix = self.fetch_from_docker_hub()
+        self._save_to_cache(matrix)
+        self.matrix = matrix
+        return matrix
 
     def get_or_fetch(self) -> VersionMatrix:
         """Get matrix from cache, or fetch if unavailable."""
         cached = self.load_from_cache()
         if cached is not None:
             return cached
-        return self.fetch_from_tigerdata()
+        return self.fetch_from_docker_hub()
+
+    def _save_to_cache(self, matrix: VersionMatrix) -> None:
+        """Save matrix to cache file."""
+        cache_file = self.cache_dir / self.CACHE_FILE
+        data = {
+            "matrix": matrix.postgres_versions,
+            "fetched_at": matrix.last_fetched.isoformat(),
+        }
+        cache_file.write_text(json.dumps(data, indent=2))
