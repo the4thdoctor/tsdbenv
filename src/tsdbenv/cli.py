@@ -8,6 +8,8 @@ from pathlib import Path
 import click
 
 from tsdbenv import __version__
+
+
 from tsdbenv.config_handler import ConfigHandler
 from tsdbenv.docker_utils import DockerClient
 from tsdbenv.models import Container
@@ -321,14 +323,6 @@ def list_alias():
     """List all containers."""
     ctx = click.get_current_context()
     ctx.invoke(list)
-
-
-@main.command("logs", hidden=True)
-@click.argument("container_name", required=False)
-def logs_alias(container_name):
-    """Show container logs."""
-    ctx = click.get_current_context()
-    ctx.invoke(logs, container_name=container_name)
 
 
 @main.command("r", hidden=True)
