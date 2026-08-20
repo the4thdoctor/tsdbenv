@@ -10,6 +10,7 @@ import click
 from tabulate import tabulate
 
 from tsdbenv import __version__
+from tsdbenv.engine_config import Engine, get_engine_from_cli_or_env, EngineConfig
 
 
 # Preprocess argv to expand short aliases before Click parses
@@ -53,7 +54,8 @@ def get_dockerfiles_dir() -> Path:
 
 
 class CLIState:
-    def __init__(self):
+    def __init__(self, engine: Engine = Engine.DOCKER):
+        self.engine = engine
         self.state_dir = ensure_state_dir()
         self.state_tracker = StateTracker(state_dir=self.state_dir)
         self.version_manager = VersionManager(cache_dir=self.state_dir)
@@ -68,12 +70,22 @@ cli_state = CLIState()
 
 @click.group(invoke_without_command=True, context_settings={"help_option_names": ["-h", "--help"]})
 @click.option("-v", "--version", is_flag=True, help="Show version and exit")
+@click.option("--engine", type=click.Choice(["docker", "podman"]), default=None, help="Container engine (default: docker)")
 @click.pass_context
-def main(ctx, version):
+def main(ctx, version, engine):
     """tsdbenv - PostgreSQL + TimescaleDB environment manager."""
     if version:
         click.echo(f"tsdbenv {__version__}")
         ctx.exit(0)
+
+    # Reinitialize CLIState with the selected engine
+    global cli_state
+    try:
+        selected_engine = get_engine_from_cli_or_env(engine)
+        cli_state = CLIState(engine=selected_engine)
+    except ValueError as e:
+        click.echo(f"[ERROR] {e}")
+        ctx.exit(1)
 
     if cli_state.docker_client is None:
         click.echo("[ERROR] Docker is not installed or not running.")
