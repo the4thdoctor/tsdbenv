@@ -85,8 +85,9 @@ def main(ctx, version):
     "--config", type=click.Path(exists=True), help="PostgreSQL config file path"
 )
 @click.option("--bind-ip", help="IP to bind container to (default: 127.0.0.1)")
+@click.option("--init", type=click.Path(exists=True), help="SQL file to execute after container creation")
 @click.option("--force", is_flag=True, help="Override version compatibility check")
-def new(postgres, timescaledb, port, config, bind_ip, force):
+def new(postgres, timescaledb, port, config, bind_ip, init, force):
     """Create a new PostgreSQL + TimescaleDB container."""
     # Refresh version matrix before creating container
     click.echo("🔄 Checking for latest TimescaleDB versions...")
@@ -172,6 +173,16 @@ def new(postgres, timescaledb, port, config, bind_ip, force):
         tsdbadmin_password=tsdbadmin_password,
     )
     cli_state.state_tracker.save_container(container)
+
+    # Execute init SQL file if provided
+    if init:
+        try:
+            click.echo("📝 Executing init SQL file...")
+            cli_state.docker_client.execute_sql_file(container_id, init)
+            click.echo("✅ Init SQL executed successfully")
+        except Exception as e:
+            click.echo(f"⚠️  Init SQL execution failed: {e}")
+            click.echo("   Container created but schema setup incomplete")
 
     display_connection_info(container)
 

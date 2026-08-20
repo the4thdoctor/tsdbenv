@@ -66,6 +66,7 @@ tsdbenv new --postgres 14 --timescaledb 2.10.0 --bind-ip 127.0.0.1
 - `--bind-ip IP` — IP to bind container to (default: 127.0.0.1)
 - `--port PORT` — PostgreSQL port (auto-detected if not specified)
 - `--config PATH` — PostgreSQL config file (optional)
+- `--init PATH` — SQL file to execute after container creation
 - `--force` — Skip version compatibility check
 
 **Features:**
@@ -180,6 +181,41 @@ List extensions in container:
 ```bash
 psql "postgresql://tsdbadmin:password@127.0.0.1:5433/tsdb" -c "\dx"
 ```
+
+## Schema Preloading
+
+Automatically load SQL schemas, fixtures, and sample data when creating containers.
+
+**Create a schema file (schema.sql):**
+
+```sql
+CREATE TABLE metrics (
+    time TIMESTAMPTZ NOT NULL,
+    host TEXT NOT NULL,
+    cpu FLOAT NOT NULL,
+    memory INT NOT NULL
+);
+
+SELECT create_hypertable('metrics', 'time');
+
+-- Insert sample data
+INSERT INTO metrics VALUES
+    (NOW(), 'server-1', 45.2, 2048),
+    (NOW(), 'server-2', 62.1, 4096),
+    (NOW(), 'server-3', 28.9, 1024);
+```
+
+**Create container with schema:**
+
+```bash
+tsdbenv -n --postgres 15 --timescaledb 2.10.0 --init schema.sql
+```
+
+**Use cases:**
+- Load test schemas for integration testing
+- Seed sample data for development
+- Reproducible test environments
+- Regression testing across PostgreSQL versions
 
 ## Tablespaces
 

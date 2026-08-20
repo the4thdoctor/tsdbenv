@@ -190,3 +190,41 @@ class DockerClient:
                 pass
             time.sleep(1)
         raise TimeoutError(f"PostgreSQL not ready after {timeout}s")
+
+    def execute_sql_file(self, container_id: str, sql_file_path: str, database: str = "tsdb") -> str:
+        """Execute SQL file in container via psql.
+
+        Args:
+            container_id: Container ID
+            sql_file_path: Path to SQL file on host
+            database: Database to connect to
+
+        Returns:
+            Command output
+
+        Raises:
+            RuntimeError: If execution fails
+        """
+        sql_content = Path(sql_file_path).read_text()
+        container = self.client.containers.get(container_id)
+
+        # Copy SQL file to container
+        import tarfile
+        import io
+        tar_stream = io.BytesIO()
+        with tarfile.open(fileobj=tar_stream, mode="w") as tar:
+            info = tarfile.TarInfo(name="init.sql")
+            info.size = len(sql_content)
+            tar.addfile(tarinfo=info, fileobj=io.BytesIO(sql_content.encode()))
+        tar_stream.seek(0)
+        container.put_archive("/tmp", tar_stream)
+
+        # Execute SQL file
+        result = container.exec_run(
+            f"psql -U tsdbadmin -d {database} -f /tmp/init.sql",
+            user="postgres",
+        )
+        if result.exit_code != 0:
+            error_msg = result.output.decode() if result.output else "Unknown error"
+            raise RuntimeError(f"SQL execution failed: {error_msg}")
+        return result.output.decode() if result.output else ""
