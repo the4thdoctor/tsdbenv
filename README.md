@@ -108,6 +108,48 @@ tsdbenv remove tsdb-04d30960
 
 Confirmation required. Gracefully handles containers no longer in Docker.
 
+### connectstring
+Get psql command for a container.
+
+```bash
+tsdbenv connectstring tsdb-04d30960
+```
+
+Outputs ready-to-use psql connection command with embedded password.
+
+### versionrefresh
+Refresh TimescaleDB version compatibility matrix.
+
+```bash
+tsdbenv versionrefresh
+```
+
+Fetches latest compatibility data from Docker Hub, merges with fallback versions, caches locally. Runs automatically on `tsdbenv new`.
+
+### matrix
+Display PostgreSQL × TimescaleDB compatibility matrix as a formatted table.
+
+```bash
+tsdbenv matrix
+```
+
+Shows all supported PostgreSQL versions and their compatible TimescaleDB versions.
+
+## Short Flags
+
+All commands support dash-prefixed short flags for quick access:
+
+```bash
+tsdbenv -n --postgres 15 --timescaledb 2.10.0    # new
+tsdbenv -l                                        # list
+tsdbenv -r tsdb-04d30960                          # remove
+tsdbenv -c tsdb-04d30960                          # connectstring
+tsdbenv -g                                        # versionrefresh (get versions)
+tsdbenv -m                                        # matrix
+tsdbenv -v                                        # version
+tsdbenv -h                                        # help
+```
+
 ## Connection
 
 All containers include a `tsdbadmin` superuser with a secure generated password.
@@ -251,12 +293,27 @@ python -m pytest --cov=src tests
 
 PostgreSQL and TimescaleDB versions must be compatible. The tool validates compatibility before creating containers.
 
+**Supported Versions:**
+- PostgreSQL: 12, 13, 14, 15, 16, 17, 18
+- TimescaleDB: 2.5.0–2.29.2 (depends on PostgreSQL version)
+
+**Compatibility Matrix:**
+View all compatible versions with:
+
+```bash
+tsdbenv matrix
+```
+
 Example compatible pairs:
 - PostgreSQL 14 + TimescaleDB 2.8.0 ✅
 - PostgreSQL 15 + TimescaleDB 2.10.0 ✅
-- PostgreSQL 14 + TimescaleDB 2.10.0 ✅
+- PostgreSQL 16 + TimescaleDB 2.29.2 ✅
+- PostgreSQL 18 + TimescaleDB 2.29.2 ✅
 
-Incompatible pairs are rejected with clear error messages.
+Incompatible pairs are rejected with clear error messages showing compatible options.
+
+**Automatic Updates:**
+Version compatibility data is automatically refreshed from Docker Hub when creating containers (`tsdbenv new`). Manual refresh available via `tsdbenv versionrefresh` or `tsdbenv -g`.
 
 ## State Management
 
