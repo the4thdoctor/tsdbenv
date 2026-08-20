@@ -407,12 +407,14 @@ def connectstring(container_name):
 def display_connection_info(container: Container) -> None:
     """Display connection information to the user."""
     connection_string = f"postgresql://tsdbadmin:{container.tsdbadmin_password}@{container.bind_ip}:{container.port}/tsdb"
-    click.echo(f"""
+    click.echo(
+        f"""
 [OK] Container '{container.name}' created successfully!
 
 Connect:
   psql "{connection_string}"
-""")
+"""
+    )
 
 
 def show_interactive_menu() -> None:

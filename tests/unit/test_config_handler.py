@@ -39,7 +39,8 @@ def test_parse_simple_kv_with_comments(temp_state_dir):
 def test_parse_postgresql_conf(temp_state_dir):
     """Test parsing full postgresql.conf format."""
     config_file = temp_state_dir / "postgresql.conf"
-    config_file.write_text("""
+    config_file.write_text(
+        """
 # PostgreSQL Configuration
 
 shared_buffers = 256MB
@@ -47,7 +48,8 @@ work_mem = 4MB
 
 # More settings
 log_statement = 'all'
-""")
+"""
+    )
 
     config = ConfigHandler.parse_postgresql_conf(config_file)
 
