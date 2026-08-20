@@ -149,7 +149,7 @@ def new(postgres, timescaledb, port, config, bind_ip, force):
     display_connection_info(container)
 
 
-@main.command()
+@main.command("list")
 def list():
     """List all containers."""
     containers = cli_state.state_tracker.load_containers()
@@ -300,6 +300,51 @@ def show_interactive_menu() -> None:
     elif choice == "remove":
         ctx = click.get_current_context()
         ctx.invoke(remove, container_name=None)
+
+
+# Short command aliases (hidden from help)
+@main.command("n", hidden=True)
+@click.option("--postgres", help="PostgreSQL version (e.g., 14)")
+@click.option("--timescaledb", help="TimescaleDB version (e.g., 2.8.0)")
+@click.option("--port", type=int, default=None, help="PostgreSQL port (default: 5432)")
+@click.option("--config", type=click.Path(exists=True), help="PostgreSQL config file path")
+@click.option("--bind-ip", help="IP to bind container to (default: 127.0.0.1)")
+@click.option("--force", is_flag=True, help="Override version compatibility check")
+def new_alias(postgres, timescaledb, port, config, bind_ip, force):
+    """Create a new PostgreSQL + TimescaleDB container."""
+    ctx = click.get_current_context()
+    ctx.invoke(new, postgres=postgres, timescaledb=timescaledb, port=port, config=config, bind_ip=bind_ip, force=force)
+
+
+@main.command("l", hidden=True)
+def list_alias():
+    """List all containers."""
+    ctx = click.get_current_context()
+    ctx.invoke(list)
+
+
+@main.command("logs", hidden=True)
+@click.argument("container_name", required=False)
+def logs_alias(container_name):
+    """Show container logs."""
+    ctx = click.get_current_context()
+    ctx.invoke(logs, container_name=container_name)
+
+
+@main.command("r", hidden=True)
+@click.argument("container_name", required=False)
+def remove_alias(container_name):
+    """Remove a container."""
+    ctx = click.get_current_context()
+    ctx.invoke(remove, container_name=container_name)
+
+
+@main.command("c", hidden=True)
+@click.argument("container_name", required=False)
+def connectstring_alias(container_name):
+    """Get psql command for a container."""
+    ctx = click.get_current_context()
+    ctx.invoke(connectstring, container_name=container_name)
 
 
 if __name__ == "__main__":
