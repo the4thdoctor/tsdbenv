@@ -2,6 +2,11 @@
 
 PostgreSQL + TimescaleDB environment manager via Docker. Spin up isolated local database environments with one command.
 
+![PostgreSQL 18+](https://img.shields.io/badge/PostgreSQL-18%2B-336791?logo=postgresql&logoColor=white)
+![TimescaleDB 2.29.0+](https://img.shields.io/badge/TimescaleDB-2.29.0%2B-0A1A29?logo=timescale&logoColor=white)
+![Python 3.8+](https://img.shields.io/badge/Python-3.8%2B-3776ab?logo=python&logoColor=white)
+![License MIT](https://img.shields.io/badge/License-MIT-green)
+
 ## Overview
 
 **tsdbenv** simplifies local PostgreSQL + TimescaleDB development by automating container setup. Provide versions → validate compatibility → build and run isolated Docker containers with persistent state, automatic port assignment, and easy access to logs. Includes all Tiger Cloud extensions (TimescaleDB, pgvector, postgres_fdw, and more).
