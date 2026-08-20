@@ -17,13 +17,35 @@ class DockerClient:
     def __init__(self, engine: Optional[str] = None) -> None:
         """Initialize Docker client with engine-specific socket.
 
+        This wrapper automatically detects and connects to the correct container engine
+        socket based on the provided engine parameter, environment variable (TSDBENV_ENGINE),
+        or default (Docker). The socket path is determined by engine_config.get_socket_path(),
+        which returns /var/run/docker.sock for Docker or /var/run/user/{uid}/podman/podman.sock
+        for rootless Podman.
+
+        For rootless Podman, port binding uses slirp4netns, which is transparent but may have
+        slightly higher latency than Docker's host bridge mode. This is a Podman architectural
+        limitation and does not affect functionality.
+
         Args:
             engine: Optional container engine ("docker" or "podman").
                    Defaults to Docker if not specified or TSDBENV_ENGINE not set.
+                   Can also be set via TSDBENV_ENGINE environment variable.
 
         Raises:
-            RuntimeError: If the engine socket is not accessible.
-            ValueError: If engine value is invalid.
+            RuntimeError: If the engine socket is not accessible or engine is not running.
+            ValueError: If engine value is invalid (not "docker" or "podman").
+
+        Example:
+            # Use default Docker
+            client = DockerClient()
+
+            # Explicitly use Podman
+            client = DockerClient(engine="podman")
+
+            # Or via environment variable
+            export TSDBENV_ENGINE=podman
+            client = DockerClient()
         """
         # Resolve engine from CLI/env/default
         engine_obj = get_engine_from_cli_or_env(engine)

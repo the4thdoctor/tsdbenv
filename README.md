@@ -51,6 +51,23 @@ Connect:
 
 Copy and paste the connection string directly.
 
+## Container Engine Selection
+
+By default, tsdbenv uses Docker. To use Podman instead, specify `--engine podman`:
+
+```bash
+tsdbenv -n --engine podman --postgres 15 --timescaledb 2.10.0
+```
+
+Set via environment variable to avoid repeating the flag:
+
+```bash
+export TSDBENV_ENGINE=podman
+tsdbenv -n --postgres 15 --timescaledb 2.10.0
+```
+
+**Requirements**: Podman must be installed and configured in rootless mode. Rootless Podman uses slirp4netns for port binding, which may add slight latency compared to Docker's host bridge mode. For setup and network details, see [docs/PODMAN.md](docs/PODMAN.md).
+
 ## Commands
 
 ### new
