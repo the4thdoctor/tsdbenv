@@ -17,8 +17,23 @@ from tsdbenv.engine_config import Engine, get_engine_from_cli_or_env
 def _expand_short_aliases():
     """Expand -n, -l, -c, -g, -m, -a to full command names."""
     if len(sys.argv) > 1:
-        # Check if first arg is docker/podman (skip alias expansion)
-        if sys.argv[1] in ("docker", "podman"):
+        # Check if first arg is docker/podman, and expand aliases in second position
+        if sys.argv[1] in ("docker", "podman") and len(sys.argv) > 2:
+            engine = sys.argv[1]
+            # Special cases for command position after engine
+            if sys.argv[2] == "-g":
+                sys.argv[2] = "versionrefresh"
+            elif sys.argv[2] == "-m":
+                sys.argv[2] = "matrix"
+            elif sys.argv[2] == "-a":
+                sys.argv[2] = "removeall"
+            elif sys.argv[2] in {"-n", "-l", "-r", "-c"}:
+                aliases = {"-n": "new", "-l": "list", "-r": "remove", "-c": "connectstring"}
+                sys.argv[2] = aliases[sys.argv[2]]
+            # Convert -t VALUE to --tablespaces VALUE
+            if "-t" in sys.argv and len(sys.argv) > sys.argv.index("-t") + 1:
+                idx = sys.argv.index("-t")
+                sys.argv[idx] = "--tablespaces"
             return
 
         # Special cases (before general aliases mapping)
