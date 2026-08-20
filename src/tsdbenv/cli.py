@@ -52,7 +52,7 @@ cli_state = CLIState()
 
 
 @click.group(invoke_without_command=True)
-@click.option("--version", is_flag=True, help="Show version and exit")
+@click.option("-v", "--version", is_flag=True, help="Show version and exit")
 @click.pass_context
 def main(ctx, version):
     """tsdbenv - PostgreSQL + TimescaleDB environment manager."""
