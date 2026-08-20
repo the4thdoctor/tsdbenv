@@ -96,7 +96,7 @@ def main(ctx, version):
 @click.option("--tablespaces", help="Comma-separated tablespace names to create (e.g., fast,archive)")
 @click.option("--force", is_flag=True, help="Override version compatibility check")
 def new(postgres, timescaledb, port, config, bind_ip, init, tablespaces, force):
-    """Create a new PostgreSQL + TimescaleDB container."""
+    """Create PostgreSQL + TimescaleDB container (-n)"""
     # Refresh version matrix before creating container
     click.echo("[REFRESH] Checking for latest TimescaleDB versions...")
     cli_state.version_manager.refresh()
@@ -214,7 +214,7 @@ def new(postgres, timescaledb, port, config, bind_ip, init, tablespaces, force):
 
 @main.command("list")
 def list():
-    """List all containers."""
+    """List all containers (-l)"""
     containers = cli_state.state_tracker.load_containers()
 
     if not containers:
@@ -237,7 +237,7 @@ def list():
 @main.command()
 @click.argument("container_name", required=False)
 def logs(container_name):
-    """Show container logs."""
+    """Show container logs"""
     if not container_name:
         containers = cli_state.state_tracker.load_containers()
         if not containers:
@@ -267,7 +267,7 @@ def logs(container_name):
 @main.command()
 @click.argument("container_name", required=False)
 def remove(container_name):
-    """Remove a container."""
+    """Remove a container (-r)"""
     if not container_name:
         containers = cli_state.state_tracker.load_containers()
         if not containers:
@@ -298,7 +298,7 @@ def remove(container_name):
 @main.command("removeall")
 @click.option("--force", is_flag=True, help="Skip confirmation prompt")
 def removeall(force):
-    """Remove all containers."""
+    """Remove all containers (-a)"""
     containers = cli_state.state_tracker.load_containers()
     if not containers:
         click.echo("No containers found.")
@@ -331,7 +331,7 @@ def removeall(force):
 @main.command()
 @click.argument("container_name", required=False)
 def connectstring(container_name):
-    """Get psql command for a container."""
+    """Get psql command for container (-c)"""
     if not container_name:
         containers = cli_state.state_tracker.load_containers()
         if not containers:
@@ -400,7 +400,7 @@ def show_interactive_menu() -> None:
 
 @main.command("versionrefresh")
 def versionrefresh():
-    """Refresh TimescaleDB version compatibility matrix."""
+    """Refresh version matrix (-g)"""
     click.echo("[REFRESH] Fetching latest TimescaleDB versions...")
     matrix = cli_state.version_manager.refresh()
     versions_found = sum(len(v) for v in matrix.postgres_versions.values())
@@ -411,7 +411,7 @@ def versionrefresh():
 
 @main.command("matrix")
 def show_matrix():
-    """Display compatibility matrix as a table."""
+    """Display compatibility matrix (-m)"""
     matrix = cli_state.version_manager.get_or_fetch()
     if not matrix.postgres_versions:
         click.echo("[ERROR] No compatibility data available")
