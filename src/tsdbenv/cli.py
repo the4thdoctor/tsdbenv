@@ -10,7 +10,7 @@ import click
 from tabulate import tabulate
 
 from tsdbenv import __version__
-from tsdbenv.engine_config import Engine, get_engine_from_cli_or_env, EngineConfig
+from tsdbenv.engine_config import Engine, get_engine_from_cli_or_env
 
 
 # Preprocess argv to expand short aliases before Click parses
@@ -78,18 +78,27 @@ def main(ctx, version, engine):
         click.echo(f"tsdbenv {__version__}")
         ctx.exit(0)
 
-    # Reinitialize CLIState with the selected engine
+    # Resolve engine from CLI or environment variable
     global cli_state
     try:
         selected_engine = get_engine_from_cli_or_env(engine)
-        cli_state = CLIState(engine=selected_engine)
     except ValueError as e:
         click.echo(f"[ERROR] {e}")
         ctx.exit(1)
 
+    # Store engine in Click context for subcommands to access
+    ctx.obj = selected_engine
+
+    # Reinitialize CLIState with the selected engine
+    cli_state = CLIState(engine=selected_engine)
+
     if cli_state.docker_client is None:
-        click.echo("[ERROR] Docker is not installed or not running.")
-        click.echo("   Please install Docker: https://docs.docker.com/get-docker/")
+        engine_name = selected_engine.value.capitalize()
+        click.echo(f"[ERROR] {engine_name} is not installed or not running.")
+        if selected_engine == Engine.DOCKER:
+            click.echo("   Please install Docker: https://docs.docker.com/get-docker/")
+        else:
+            click.echo("   Please install Podman: https://podman.io/")
         ctx.exit(1)
 
     if ctx.invoked_subcommand is None:

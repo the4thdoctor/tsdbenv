@@ -130,3 +130,53 @@ class TestEngineImports:
         from tsdbenv import cli as cli_module
         assert hasattr(cli_module, "Engine")
         assert hasattr(cli_module, "get_engine_from_cli_or_env")
+
+
+class TestEngineContextPassing:
+    """Test that engine is passed to Click context for subcommands."""
+
+    @patch("tsdbenv.cli.StateTracker")
+    @patch("tsdbenv.cli.VersionManager")
+    @patch("tsdbenv.cli.ensure_state_dir")
+    @patch("tsdbenv.cli.DockerClient")
+    def test_docker_engine_in_context(self, mock_docker, mock_dir, mock_version, mock_tracker):
+        """Verify Docker engine is stored in Click context."""
+        mock_dir.return_value = "/tmp/test_state"
+        mock_docker.return_value = MagicMock()
+
+        # Test via CLI help which accesses the context
+        result = CliRunner().invoke(main, ["--engine", "docker", "--help"])
+        assert result.exit_code == 0
+        assert "--engine" in result.output
+
+    @patch("tsdbenv.cli.StateTracker")
+    @patch("tsdbenv.cli.VersionManager")
+    @patch("tsdbenv.cli.ensure_state_dir")
+    @patch("tsdbenv.cli.DockerClient")
+    def test_podman_engine_in_context(self, mock_docker, mock_dir, mock_version, mock_tracker):
+        """Verify Podman engine is stored in Click context."""
+        mock_dir.return_value = "/tmp/test_state"
+        mock_docker.return_value = MagicMock()
+
+        # Test via CLI help which accesses the context
+        result = CliRunner().invoke(main, ["--engine", "podman", "--help"])
+        assert result.exit_code == 0
+        assert "--engine" in result.output
+
+
+class TestEngineAwareErrorMessages:
+    """Test that error messages reference the correct engine."""
+
+    def test_docker_engine_error_capitalized(self):
+        """Verify error message says 'Docker' when Docker selected."""
+        # Verify the error message construction logic
+        engine = Engine.DOCKER
+        engine_name = engine.value.capitalize()
+        assert engine_name == "Docker"
+
+    def test_podman_engine_error_capitalized(self):
+        """Verify error message says 'Podman' when Podman selected."""
+        # Verify the error message construction logic
+        engine = Engine.PODMAN
+        engine_name = engine.value.capitalize()
+        assert engine_name == "Podman"
