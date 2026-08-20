@@ -140,7 +140,7 @@ tsdbenv -n --engine podman --postgres 15 --timescaledb 2.10.0 --bind-ip 127.0.0.
 
 Output:
 ```
-✅ Container 'tsdb-abc12345' created successfully!
+Container 'tsdb-abc12345' created successfully!
 
 Connect:
   psql "postgresql://tsdbadmin:aBcD1234eFgH5678@127.0.0.1:5433"
