@@ -117,7 +117,34 @@ def init_cli_state(engine: Engine) -> None:
 )
 @click.pass_context
 def main(ctx, version, engine):
-    """tsdbenv - PostgreSQL + TimescaleDB environment manager."""
+    """tsdbenv - PostgreSQL + TimescaleDB environment manager.
+
+Examples:
+
+  Create container:
+    tsdbenv -n --postgres 16 --timescaledb 2.29.2
+
+  Create with init SQL and tablespaces:
+    tsdbenv -n --postgres 16 --timescaledb 2.29.2 -t fast,archive --init schema.sql
+
+  List containers:
+    tsdbenv -l
+
+  Show compatibility matrix:
+    tsdbenv -m
+
+  Get connection string:
+    tsdbenv -c mycontainer
+
+  Create tablespaces on container:
+    tsdbenv -t mycontainer --names fast,archive
+
+  Use Podman instead of Docker:
+    tsdbenv -n --postgres 16 --engine podman
+
+  Refresh version cache:
+    tsdbenv -g
+    """
     if version:
         click.echo(f"tsdbenv {__version__}")
         ctx.exit(0)
