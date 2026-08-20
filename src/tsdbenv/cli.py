@@ -2,12 +2,25 @@
 # Created: 2026-08-19
 
 import hashlib
+import sys
 from datetime import datetime
 from pathlib import Path
 
 import click
 
 from tsdbenv import __version__
+
+
+# Preprocess argv to expand short aliases before Click parses
+def _expand_short_aliases():
+    """Expand -n, -l, -r, -c to full command names."""
+    if len(sys.argv) > 1:
+        aliases = {"-n": "new", "-l": "list", "-r": "remove", "-c": "connectstring"}
+        if sys.argv[1] in aliases:
+            sys.argv[1] = aliases[sys.argv[1]]
+
+
+_expand_short_aliases()
 
 
 from tsdbenv.config_handler import ConfigHandler
