@@ -1,69 +1,70 @@
 # Author: Wagner Bianchi <wagnerbianchijr@gmail.com>
 # Created: 2026-08-19
 
+import os
 from unittest.mock import MagicMock, patch
 
 import docker.errors
 import pytest
 
 from tsdbenv.docker_utils import DockerClient
+from tsdbenv.engine_config import get_socket_path, Engine
 
 
 @pytest.fixture
-def mock_client():
-    """Patch docker.DockerClient to return a MagicMock client."""
-    with patch("tsdbenv.docker_utils.docker.DockerClient") as mock_docker_client:
+def mock_docker_client():
+    """Patch docker.from_env to return a MagicMock client (for Docker engine)."""
+    with patch("tsdbenv.docker_utils.docker.from_env") as mock_from_env:
         fake_client = MagicMock()
         fake_client.ping.return_value = True
-        mock_docker_client.return_value = fake_client
+        mock_from_env.return_value = fake_client
         yield fake_client
 
 
-def test_init_success(mock_client):
+def test_init_success(mock_docker_client):
     """DockerClient initializes when the daemon is reachable."""
     client = DockerClient()
-    assert client.client is mock_client
-    mock_client.ping.assert_called_once()
+    assert client.client is mock_docker_client
+    mock_docker_client.ping.assert_called_once()
 
 
-def test_init_with_docker_engine(mock_client):
+def test_init_with_docker_engine(mock_docker_client):
     """DockerClient initializes with explicit docker engine."""
-    with patch("tsdbenv.docker_utils.docker.DockerClient") as mock_docker_client:
+    with patch("tsdbenv.docker_utils.docker.from_env") as mock_from_env:
         fake_client = MagicMock()
         fake_client.ping.return_value = True
-        mock_docker_client.return_value = fake_client
+        mock_from_env.return_value = fake_client
 
         client = DockerClient(engine="docker")
 
         assert client.client is fake_client
-        mock_docker_client.assert_called_once_with(
-            base_url="unix:///var/run/docker.sock"
-        )
+        mock_from_env.assert_called_once()
         fake_client.ping.assert_called_once()
 
 
-def test_init_with_podman_engine(mock_client):
+def test_init_with_podman_engine(mock_docker_client):
     """DockerClient initializes with explicit podman engine."""
-    with patch("tsdbenv.docker_utils.docker.DockerClient") as mock_docker_client:
+    with patch("tsdbenv.docker_utils.docker.DockerClient") as mock_docker_client_ctor:
         fake_client = MagicMock()
         fake_client.ping.return_value = True
-        mock_docker_client.return_value = fake_client
+        mock_docker_client_ctor.return_value = fake_client
 
         client = DockerClient(engine="podman")
 
         assert client.client is fake_client
-        mock_docker_client.assert_called_once_with(
-            base_url="unix:///run/podman/podman.sock"
+        socket_path = get_socket_path(Engine.PODMAN)
+        mock_docker_client_ctor.assert_called_once_with(
+            base_url=f"unix://{socket_path}"
         )
         fake_client.ping.assert_called_once()
 
 
 def test_init_raises_when_docker_not_running():
     """DockerClient raises RuntimeError when ping fails."""
-    with patch("tsdbenv.docker_utils.docker.DockerClient") as mock_docker_client:
+    with patch("tsdbenv.docker_utils.docker.from_env") as mock_from_env:
         fake_client = MagicMock()
         fake_client.ping.side_effect = Exception("connection refused")
-        mock_docker_client.return_value = fake_client
+        mock_from_env.return_value = fake_client
         with pytest.raises(RuntimeError, match="Docker is not running or not accessible"):
             DockerClient()
 
@@ -80,10 +81,10 @@ def test_init_raises_when_podman_not_running():
 
 def test_check_docker_installed_true():
     """Test check_docker_installed returns True when ping succeeds."""
-    with patch("tsdbenv.docker_utils.docker.DockerClient") as mock_docker_client:
+    with patch("tsdbenv.docker_utils.docker.from_env") as mock_from_env:
         fake_client = MagicMock()
         fake_client.ping.return_value = True
-        mock_docker_client.return_value = fake_client
+        mock_from_env.return_value = fake_client
 
         client = DockerClient()
         assert client.check_docker_installed() is True
@@ -91,14 +92,11 @@ def test_check_docker_installed_true():
 
 def test_check_docker_installed_false():
     """Test check_docker_installed returns False when ping fails."""
-    with patch("tsdbenv.docker_utils.docker.DockerClient") as mock_docker_client:
+    with patch("tsdbenv.docker_utils.docker.from_env") as mock_from_env:
         fake_client = MagicMock()
-        fake_client.ping.side_effect = Exception("boom")
-        mock_docker_client.return_value = fake_client
-
         # First ping succeeds for __init__, second fails for check_docker_installed
-        ping_calls = [True, Exception("boom")]
         fake_client.ping.side_effect = [True, Exception("boom")]
+        mock_from_env.return_value = fake_client
 
         client = DockerClient()
         assert client.check_docker_installed() is False
@@ -106,10 +104,10 @@ def test_check_docker_installed_false():
 
 def test_create_container_success():
     """Test successful container creation."""
-    with patch("tsdbenv.docker_utils.docker.DockerClient") as mock_docker_client:
+    with patch("tsdbenv.docker_utils.docker.from_env") as mock_from_env:
         fake_client = MagicMock()
         fake_client.ping.return_value = True
-        mock_docker_client.return_value = fake_client
+        mock_from_env.return_value = fake_client
 
         client = DockerClient()
         fake_container = MagicMock()
@@ -135,10 +133,10 @@ def test_create_container_success():
 
 def test_create_container_port_conflict():
     """Test port conflict error handling."""
-    with patch("tsdbenv.docker_utils.docker.DockerClient") as mock_docker_client:
+    with patch("tsdbenv.docker_utils.docker.from_env") as mock_from_env:
         fake_client = MagicMock()
         fake_client.ping.return_value = True
-        mock_docker_client.return_value = fake_client
+        mock_from_env.return_value = fake_client
 
         client = DockerClient()
         fake_client.containers.run.side_effect = docker.errors.APIError(
@@ -156,10 +154,10 @@ def test_create_container_port_conflict():
 
 def test_create_container_other_api_error_propagates():
     """Test other API errors propagate correctly."""
-    with patch("tsdbenv.docker_utils.docker.DockerClient") as mock_docker_client:
+    with patch("tsdbenv.docker_utils.docker.from_env") as mock_from_env:
         fake_client = MagicMock()
         fake_client.ping.return_value = True
-        mock_docker_client.return_value = fake_client
+        mock_from_env.return_value = fake_client
 
         client = DockerClient()
         fake_client.containers.run.side_effect = docker.errors.APIError(
@@ -177,10 +175,10 @@ def test_create_container_other_api_error_propagates():
 
 def test_start_container():
     """Test starting a container."""
-    with patch("tsdbenv.docker_utils.docker.DockerClient") as mock_docker_client:
+    with patch("tsdbenv.docker_utils.docker.from_env") as mock_from_env:
         fake_client = MagicMock()
         fake_client.ping.return_value = True
-        mock_docker_client.return_value = fake_client
+        mock_from_env.return_value = fake_client
 
         client = DockerClient()
         fake_container = MagicMock()
@@ -194,10 +192,10 @@ def test_start_container():
 
 def test_stop_container():
     """Test stopping a container."""
-    with patch("tsdbenv.docker_utils.docker.DockerClient") as mock_docker_client:
+    with patch("tsdbenv.docker_utils.docker.from_env") as mock_from_env:
         fake_client = MagicMock()
         fake_client.ping.return_value = True
-        mock_docker_client.return_value = fake_client
+        mock_from_env.return_value = fake_client
 
         client = DockerClient()
         fake_container = MagicMock()
@@ -210,10 +208,10 @@ def test_stop_container():
 
 def test_remove_container_running():
     """Test removing a running container."""
-    with patch("tsdbenv.docker_utils.docker.DockerClient") as mock_docker_client:
+    with patch("tsdbenv.docker_utils.docker.from_env") as mock_from_env:
         fake_client = MagicMock()
         fake_client.ping.return_value = True
-        mock_docker_client.return_value = fake_client
+        mock_from_env.return_value = fake_client
 
         client = DockerClient()
         fake_container = MagicMock()
@@ -228,10 +226,10 @@ def test_remove_container_running():
 
 def test_remove_container_already_stopped():
     """Test removing a stopped container."""
-    with patch("tsdbenv.docker_utils.docker.DockerClient") as mock_docker_client:
+    with patch("tsdbenv.docker_utils.docker.from_env") as mock_from_env:
         fake_client = MagicMock()
         fake_client.ping.return_value = True
-        mock_docker_client.return_value = fake_client
+        mock_from_env.return_value = fake_client
 
         client = DockerClient()
         fake_container = MagicMock()
@@ -246,10 +244,10 @@ def test_remove_container_already_stopped():
 
 def test_remove_container_not_found():
     """Test removing a container that no longer exists in Docker."""
-    with patch("tsdbenv.docker_utils.docker.DockerClient") as mock_docker_client:
+    with patch("tsdbenv.docker_utils.docker.from_env") as mock_from_env:
         fake_client = MagicMock()
         fake_client.ping.return_value = True
-        mock_docker_client.return_value = fake_client
+        mock_from_env.return_value = fake_client
 
         client = DockerClient()
         fake_client.containers.get.side_effect = docker.errors.NotFound(
@@ -264,10 +262,10 @@ def test_remove_container_not_found():
 
 def test_get_container_logs():
     """Test getting container logs."""
-    with patch("tsdbenv.docker_utils.docker.DockerClient") as mock_docker_client:
+    with patch("tsdbenv.docker_utils.docker.from_env") as mock_from_env:
         fake_client = MagicMock()
         fake_client.ping.return_value = True
-        mock_docker_client.return_value = fake_client
+        mock_from_env.return_value = fake_client
 
         client = DockerClient()
         fake_container = MagicMock()
@@ -284,10 +282,10 @@ def test_get_container_logs():
 
 def test_list_containers():
     """Test listing containers."""
-    with patch("tsdbenv.docker_utils.docker.DockerClient") as mock_docker_client:
+    with patch("tsdbenv.docker_utils.docker.from_env") as mock_from_env:
         fake_client = MagicMock()
         fake_client.ping.return_value = True
-        mock_docker_client.return_value = fake_client
+        mock_from_env.return_value = fake_client
 
         client = DockerClient()
         fake_container = MagicMock()
@@ -312,10 +310,10 @@ def test_list_containers():
 
 def test_wait_for_postgres_ready_immediately():
     """Test wait_for_postgres when database is ready immediately."""
-    with patch("tsdbenv.docker_utils.docker.DockerClient") as mock_docker_client:
+    with patch("tsdbenv.docker_utils.docker.from_env") as mock_from_env:
         fake_client = MagicMock()
         fake_client.ping.return_value = True
-        mock_docker_client.return_value = fake_client
+        mock_from_env.return_value = fake_client
 
         client = DockerClient()
         with patch.object(
@@ -328,10 +326,10 @@ def test_wait_for_postgres_ready_immediately():
 
 def test_wait_for_postgres_timeout():
     """Test wait_for_postgres timeout."""
-    with patch("tsdbenv.docker_utils.docker.DockerClient") as mock_docker_client:
+    with patch("tsdbenv.docker_utils.docker.from_env") as mock_from_env:
         fake_client = MagicMock()
         fake_client.ping.return_value = True
-        mock_docker_client.return_value = fake_client
+        mock_from_env.return_value = fake_client
 
         client = DockerClient()
         with patch.object(client, "get_container_logs", return_value="starting up..."):

@@ -1,41 +1,41 @@
 # Author: Wagner Bianchi <wagnerbianchijr@gmail.com>
 # Created: 2026-08-20
 
+import os
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 from tsdbenv.docker_utils import DockerClient
+from tsdbenv.engine_config import get_socket_path, Engine
 
 
 def test_docker_client_default_engine():
     """Test DockerClient() defaults to Docker engine."""
-    with patch("tsdbenv.docker_utils.docker.DockerClient") as mock_docker_client:
+    with patch("tsdbenv.docker_utils.docker.from_env") as mock_from_env:
         fake_client = MagicMock()
         fake_client.ping.return_value = True
-        mock_docker_client.return_value = fake_client
+        mock_from_env.return_value = fake_client
 
         DockerClient()
 
-        # Should be called with Docker socket path
-        mock_docker_client.assert_called_once_with(
-            base_url="unix:///var/run/docker.sock"
-        )
+        # Should use docker.from_env() for Docker (honors DOCKER_HOST, contexts, etc.)
+        mock_from_env.assert_called_once()
+        fake_client.ping.assert_called_once()
 
 
 def test_docker_client_explicit_docker_engine():
-    """Test DockerClient(engine='docker') uses Docker socket."""
-    with patch("tsdbenv.docker_utils.docker.DockerClient") as mock_docker_client:
+    """Test DockerClient(engine='docker') uses docker.from_env()."""
+    with patch("tsdbenv.docker_utils.docker.from_env") as mock_from_env:
         fake_client = MagicMock()
         fake_client.ping.return_value = True
-        mock_docker_client.return_value = fake_client
+        mock_from_env.return_value = fake_client
 
         DockerClient(engine="docker")
 
-        # Should be called with Docker socket path
-        mock_docker_client.assert_called_once_with(
-            base_url="unix:///var/run/docker.sock"
-        )
+        # Should use docker.from_env() for Docker
+        mock_from_env.assert_called_once()
+        fake_client.ping.assert_called_once()
 
 
 def test_docker_client_explicit_podman_engine():
@@ -47,9 +47,10 @@ def test_docker_client_explicit_podman_engine():
 
         DockerClient(engine="podman")
 
-        # Should be called with Podman socket path
+        # Should be called with Podman socket path (dynamic)
+        socket_path = get_socket_path(Engine.PODMAN)
         mock_docker_client.assert_called_once_with(
-            base_url="unix:///run/podman/podman.sock"
+            base_url=f"unix://{socket_path}"
         )
 
 
@@ -63,16 +64,17 @@ def test_docker_client_case_insensitive_engine():
         DockerClient(engine="PODMAN")
 
         # Should be called with Podman socket path (case-insensitive)
+        socket_path = get_socket_path(Engine.PODMAN)
         mock_docker_client.assert_called_once_with(
-            base_url="unix:///run/podman/podman.sock"
+            base_url=f"unix://{socket_path}"
         )
 
 
 def test_docker_client_docker_socket_not_running():
     """Test error message when Docker socket is not available."""
-    with patch("tsdbenv.docker_utils.docker.DockerClient") as mock_docker_client:
+    with patch("tsdbenv.docker_utils.docker.from_env") as mock_from_env:
         # Simulate socket connection failure
-        mock_docker_client.side_effect = Exception("Cannot connect to Unix socket")
+        mock_from_env.side_effect = Exception("Cannot connect to Docker")
 
         with pytest.raises(
             RuntimeError,
@@ -111,23 +113,22 @@ def test_docker_client_engine_from_env_variable():
             DockerClient()
 
             # Should use Podman socket when env var is set
+            socket_path = get_socket_path(Engine.PODMAN)
             mock_docker_client.assert_called_once_with(
-                base_url="unix:///run/podman/podman.sock"
+                base_url=f"unix://{socket_path}"
             )
 
 
 def test_docker_client_cli_overrides_env():
     """Test CLI engine parameter overrides TSDBENV_ENGINE environment variable."""
-    with patch("tsdbenv.docker_utils.docker.DockerClient") as mock_docker_client:
+    with patch("tsdbenv.docker_utils.docker.from_env") as mock_from_env:
         fake_client = MagicMock()
         fake_client.ping.return_value = True
-        mock_docker_client.return_value = fake_client
+        mock_from_env.return_value = fake_client
 
         with patch.dict("os.environ", {"TSDBENV_ENGINE": "podman"}):
             # Explicit docker engine should override env var
             DockerClient(engine="docker")
 
-            # Should use Docker socket even though env var says podman
-            mock_docker_client.assert_called_once_with(
-                base_url="unix:///var/run/docker.sock"
-            )
+            # Should use docker.from_env() even though env var says podman
+            mock_from_env.assert_called_once()

@@ -20,7 +20,7 @@ class DockerClient:
         This wrapper automatically detects and connects to the correct container engine
         socket based on the provided engine parameter, environment variable (TSDBENV_ENGINE),
         or default (Docker). The socket path is determined by engine_config.get_socket_path(),
-        which returns /var/run/docker.sock for Docker or /var/run/user/{uid}/podman/podman.sock
+        which returns /var/run/docker.sock for Docker or /run/user/{uid}/podman/podman.sock
         for rootless Podman.
 
         For rootless Podman, port binding uses slirp4netns, which is transparent but may have

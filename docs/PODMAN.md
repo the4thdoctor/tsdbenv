@@ -341,9 +341,8 @@ tsdbenv automatically selects the correct socket for each engine:
 |--------|-------------|----------|
 | Docker | `/var/run/docker.sock` | Linux |
 | Docker | `/var/run/docker.sock` (via machine) | macOS |
-| Podman | `/var/run/user/{uid}/podman/podman.sock` | Linux (rootless) |
-| Podman | `/var/run/podman/podman.sock` | Linux (rootful, `sudo`) |
-| Podman | `/var/run/user/{uid}/podman/podman.sock` (via machine) | macOS |
+| Podman | `/run/user/{uid}/podman/podman.sock` | Linux (rootless) |
+| Podman | `/run/user/{uid}/podman/podman.sock` (via machine) | macOS |
 
 No manual socket configuration needed — tsdbenv handles this automatically.
 
