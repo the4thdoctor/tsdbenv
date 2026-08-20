@@ -14,8 +14,11 @@ class VersionManager:
 
     CACHE_FILE = "version_matrix.json"
     FALLBACK_MATRIX = {
+        "12": ["2.5.0", "2.6.0", "2.7.0"],
+        "13": ["2.6.0", "2.7.0", "2.8.0"],
         "14": ["2.8.0", "2.9.0", "2.10.0"],
         "15": ["2.9.0", "2.10.0", "2.11.0"],
+        "16": ["2.10.0", "2.11.0", "2.12.0"],
     }
 
     def __init__(self, cache_dir: Optional[Path] = None):
@@ -35,6 +38,12 @@ class VersionManager:
         if self.matrix is None:
             self.matrix = self.get_or_fetch()
         return self.matrix.is_compatible(postgres_ver, timescaledb_ver)
+
+    def get_compatible_timescaledb_versions(self, postgres_ver: str) -> list:
+        """Get compatible TimescaleDB versions for a PostgreSQL version."""
+        if self.matrix is None:
+            self.matrix = self.get_or_fetch()
+        return self.matrix.postgres_versions.get(postgres_ver, [])
 
     def load_from_cache(self) -> Optional[VersionMatrix]:
         """Load compatibility matrix from cache file."""

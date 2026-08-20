@@ -71,9 +71,14 @@ def new(postgres, timescaledb, port, config, bind_ip, force):
         timescaledb = click.prompt("TimescaleDB version", type=str)
 
     if not force and not cli_state.version_manager.is_compatible(postgres, timescaledb):
+        compatible_versions = cli_state.version_manager.get_compatible_timescaledb_versions(postgres)
         click.echo(
             f"❌ TimescaleDB {timescaledb} is not compatible with PostgreSQL {postgres}"
         )
+        if compatible_versions:
+            versions_str = ", ".join(compatible_versions)
+            click.echo(f"   ℹ️  Compatible TimescaleDB versions for PostgreSQL {postgres}: {versions_str}")
+        click.echo(f"   💡 Tip: Use --force to override compatibility check")
         raise click.Abort()
 
     # Generate unique container name from current timestamp
