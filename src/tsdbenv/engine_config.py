@@ -4,6 +4,7 @@
 import os
 from dataclasses import dataclass
 from enum import Enum
+from pathlib import Path
 from typing import Optional
 
 
@@ -18,18 +19,43 @@ def get_socket_path(engine: Engine) -> str:
     """
     Get socket path for the specified container engine.
 
+    For Docker, returns the standard socket path. For Podman, derives the rootless
+    socket path from XDG_RUNTIME_DIR and UID.
+
     Args:
         engine: Engine.DOCKER or Engine.PODMAN
 
     Returns:
-        Socket path: /var/run/docker.sock for Docker,
-        /run/podman/podman.sock for Podman
+        Socket path string. For Docker: /var/run/docker.sock (or honors DOCKER_HOST).
+        For rootless Podman: /run/user/{uid}/podman/podman.sock on Linux,
+        or machine socket path on macOS.
+
+    Raises:
+        RuntimeError: If Podman socket path cannot be determined.
     """
-    socket_paths = {
-        Engine.DOCKER: "/var/run/docker.sock",
-        Engine.PODMAN: "/run/podman/podman.sock",
-    }
-    return socket_paths[engine]
+    if engine == Engine.DOCKER:
+        return "/var/run/docker.sock"
+
+    # For Podman: determine rootless socket path
+    if engine == Engine.PODMAN:
+        # Try XDG_RUNTIME_DIR-based path (Linux rootless)
+        xdg_runtime = os.getenv("XDG_RUNTIME_DIR")
+        if xdg_runtime:
+            socket_path = f"{xdg_runtime}/podman/podman.sock"
+            if Path(socket_path).exists():
+                return socket_path
+
+        # Fallback: /run/user/{uid}/podman/podman.sock (Linux rootless default)
+        uid = os.getuid()
+        linux_rootless_path = f"/run/user/{uid}/podman/podman.sock"
+        if Path(linux_rootless_path).exists():
+            return linux_rootless_path
+
+        # macOS: socket is typically managed by podman machine
+        # Return the Linux path and let the connection attempt fail with helpful error
+        return linux_rootless_path
+
+    raise RuntimeError(f"Unknown engine: {engine}")
 
 
 def get_engine_from_cli_or_env(cli_engine: Optional[str] = None) -> Engine:
@@ -80,45 +106,27 @@ class EngineConfig:
 
     engine: Engine
     socket_path: str
-    network_mode: str
 
     def __post_init__(self):
         """Validate and set socket_path based on engine if not provided."""
         if not self.socket_path:
             self.socket_path = get_socket_path(self.engine)
 
-        # Validate network_mode is set
-        if not self.network_mode:
-            raise ValueError("network_mode must be specified")
-
     @staticmethod
     def from_engine(engine: Engine) -> "EngineConfig":
         """
         Create EngineConfig from an Engine enum.
 
-        Sets network mode based on engine:
-        - Docker: 'bridge'
-        - Podman: 'slirp4netns'
-
         Args:
             engine: Engine.DOCKER or Engine.PODMAN
 
         Returns:
-            EngineConfig instance with appropriate defaults
+            EngineConfig instance with socket_path set
         """
         socket_path = get_socket_path(engine)
-
-        # Set network mode based on engine
-        network_modes = {
-            Engine.DOCKER: "bridge",
-            Engine.PODMAN: "slirp4netns",
-        }
-        network_mode = network_modes[engine]
-
         return EngineConfig(
             engine=engine,
             socket_path=socket_path,
-            network_mode=network_mode,
         )
 
     @staticmethod

@@ -38,8 +38,12 @@ class TestGetSocketPath:
         assert get_socket_path(Engine.DOCKER) == "/var/run/docker.sock"
 
     def test_podman_socket_path(self):
-        """Test Podman socket path."""
-        assert get_socket_path(Engine.PODMAN) == "/run/podman/podman.sock"
+        """Test Podman socket path is rootless format."""
+        socket_path = get_socket_path(Engine.PODMAN)
+        # Should be /run/user/{uid}/podman/podman.sock (rootless Podman)
+        uid = os.getuid()
+        expected = f"/run/user/{uid}/podman/podman.sock"
+        assert socket_path == expected
 
 
 class TestGetEngineFromCliOrEnv:
@@ -112,40 +116,20 @@ class TestEngineConfig:
         config = EngineConfig(
             engine=Engine.DOCKER,
             socket_path="/var/run/docker.sock",
-            network_mode="bridge",
         )
         assert config.engine == Engine.DOCKER
         assert config.socket_path == "/var/run/docker.sock"
-        assert config.network_mode == "bridge"
 
     def test_engine_config_creation_podman(self):
         """Test creating EngineConfig with Podman."""
+        uid = os.getuid()
+        socket_path = f"/run/user/{uid}/podman/podman.sock"
         config = EngineConfig(
             engine=Engine.PODMAN,
-            socket_path="/run/podman/podman.sock",
-            network_mode="slirp4netns",
+            socket_path=socket_path,
         )
         assert config.engine == Engine.PODMAN
-        assert config.socket_path == "/run/podman/podman.sock"
-        assert config.network_mode == "slirp4netns"
-
-    def test_engine_config_missing_network_mode(self):
-        """Test EngineConfig raises error when network_mode is missing."""
-        with pytest.raises(ValueError, match="network_mode must be specified"):
-            EngineConfig(
-                engine=Engine.DOCKER,
-                socket_path="/var/run/docker.sock",
-                network_mode="",
-            )
-
-    def test_engine_config_missing_network_mode_none(self):
-        """Test EngineConfig raises error when network_mode is None."""
-        with pytest.raises(ValueError, match="network_mode must be specified"):
-            EngineConfig(
-                engine=Engine.DOCKER,
-                socket_path="/var/run/docker.sock",
-                network_mode=None,
-            )
+        assert config.socket_path == socket_path
 
 
 class TestEngineConfigFromEngine:
@@ -156,14 +140,14 @@ class TestEngineConfigFromEngine:
         config = EngineConfig.from_engine(Engine.DOCKER)
         assert config.engine == Engine.DOCKER
         assert config.socket_path == "/var/run/docker.sock"
-        assert config.network_mode == "bridge"
 
     def test_from_engine_podman(self):
         """Test creating EngineConfig from Engine.PODMAN."""
+        uid = os.getuid()
+        expected_path = f"/run/user/{uid}/podman/podman.sock"
         config = EngineConfig.from_engine(Engine.PODMAN)
         assert config.engine == Engine.PODMAN
-        assert config.socket_path == "/run/podman/podman.sock"
-        assert config.network_mode == "slirp4netns"
+        assert config.socket_path == expected_path
 
 
 class TestEngineConfigFromCliOrEnv:
@@ -175,15 +159,15 @@ class TestEngineConfigFromCliOrEnv:
         config = EngineConfig.from_cli_or_env(cli_engine="docker")
         assert config.engine == Engine.DOCKER
         assert config.socket_path == "/var/run/docker.sock"
-        assert config.network_mode == "bridge"
 
     def test_from_cli_or_env_cli_podman(self, monkeypatch):
         """Test from_cli_or_env with CLI arg for Podman."""
         monkeypatch.delenv("TSDBENV_ENGINE", raising=False)
+        uid = os.getuid()
+        expected_path = f"/run/user/{uid}/podman/podman.sock"
         config = EngineConfig.from_cli_or_env(cli_engine="podman")
         assert config.engine == Engine.PODMAN
-        assert config.socket_path == "/run/podman/podman.sock"
-        assert config.network_mode == "slirp4netns"
+        assert config.socket_path == expected_path
 
     def test_from_cli_or_env_env_var_docker(self, monkeypatch):
         """Test from_cli_or_env with TSDBENV_ENGINE for Docker."""
@@ -191,15 +175,15 @@ class TestEngineConfigFromCliOrEnv:
         config = EngineConfig.from_cli_or_env()
         assert config.engine == Engine.DOCKER
         assert config.socket_path == "/var/run/docker.sock"
-        assert config.network_mode == "bridge"
 
     def test_from_cli_or_env_env_var_podman(self, monkeypatch):
         """Test from_cli_or_env with TSDBENV_ENGINE for Podman."""
         monkeypatch.setenv("TSDBENV_ENGINE", "podman")
+        uid = os.getuid()
+        expected_path = f"/run/user/{uid}/podman/podman.sock"
         config = EngineConfig.from_cli_or_env()
         assert config.engine == Engine.PODMAN
-        assert config.socket_path == "/run/podman/podman.sock"
-        assert config.network_mode == "slirp4netns"
+        assert config.socket_path == expected_path
 
     def test_from_cli_or_env_defaults_to_docker(self, monkeypatch):
         """Test from_cli_or_env defaults to Docker when no CLI or env var."""
@@ -207,15 +191,15 @@ class TestEngineConfigFromCliOrEnv:
         config = EngineConfig.from_cli_or_env()
         assert config.engine == Engine.DOCKER
         assert config.socket_path == "/var/run/docker.sock"
-        assert config.network_mode == "bridge"
 
     def test_from_cli_or_env_cli_overrides_env(self, monkeypatch):
         """Test from_cli_or_env: CLI arg overrides env var."""
         monkeypatch.setenv("TSDBENV_ENGINE", "docker")
+        uid = os.getuid()
+        expected_path = f"/run/user/{uid}/podman/podman.sock"
         config = EngineConfig.from_cli_or_env(cli_engine="podman")
         assert config.engine == Engine.PODMAN
-        assert config.socket_path == "/run/podman/podman.sock"
-        assert config.network_mode == "slirp4netns"
+        assert config.socket_path == expected_path
 
     def test_from_cli_or_env_invalid_cli(self, monkeypatch):
         """Test from_cli_or_env with invalid CLI arg."""

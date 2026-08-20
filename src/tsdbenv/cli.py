@@ -60,11 +60,12 @@ class CLIState:
         self.state_tracker = StateTracker(state_dir=self.state_dir)
         self.version_manager = VersionManager(cache_dir=self.state_dir)
         try:
-            self.docker_client = DockerClient()
+            self.docker_client = DockerClient(engine=engine.value)
         except RuntimeError:
             self.docker_client = None
 
 
+# Initialize with default engine; will be reinitialized in main() with CLI/env engine
 cli_state = CLIState()
 
 

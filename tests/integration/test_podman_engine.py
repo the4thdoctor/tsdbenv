@@ -25,20 +25,30 @@ from tsdbenv.docker_utils import DockerClient
 
 
 def _is_podman_available() -> bool:
-    """Check if Podman is available and running.
+    """Check if Podman is available and socket is reachable.
 
     Returns:
-        True if podman CLI is installed and responding, False otherwise.
+        True if podman CLI is installed and socket is accessible, False otherwise.
     """
     try:
+        # First check if podman CLI is available
         subprocess.run(
             ["podman", "--version"],
             check=True,
             capture_output=True,
             timeout=5,
         )
+        # Then verify socket is reachable by trying to connect
+        from tsdbenv.engine_config import get_socket_path, Engine
+        socket_path = get_socket_path(Engine.PODMAN)
+        # Check if socket exists and is accessible
+        if not Path(socket_path).exists():
+            return False
+        # Try to actually connect to verify it's responsive
+        client = docker.DockerClient(base_url=f"unix://{socket_path}")
+        client.ping()
         return True
-    except (FileNotFoundError, subprocess.TimeoutExpired, subprocess.CalledProcessError):
+    except (FileNotFoundError, subprocess.TimeoutExpired, subprocess.CalledProcessError, Exception):
         return False
 
 
@@ -55,6 +65,8 @@ def cleanup_podman_containers() -> Generator:
 
     Yields a register function to track container IDs for cleanup.
     """
+    from tsdbenv.engine_config import get_socket_path, Engine
+
     containers_to_cleanup = []
 
     def _register_container(container_id: str) -> None:
@@ -66,7 +78,8 @@ def cleanup_podman_containers() -> Generator:
     # Cleanup: remove all registered containers
     if containers_to_cleanup:
         try:
-            client = docker.DockerClient(base_url="unix:///run/podman/podman.sock")
+            socket_path = get_socket_path(Engine.PODMAN)
+            client = docker.DockerClient(base_url=f"unix://{socket_path}")
             for cid in containers_to_cleanup:
                 try:
                     container = client.containers.get(cid)

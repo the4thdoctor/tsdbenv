@@ -49,22 +49,23 @@ class DockerClient:
         """
         # Resolve engine from CLI/env/default
         engine_obj = get_engine_from_cli_or_env(engine)
-        socket_path = get_socket_path(engine_obj)
         self._engine = engine_obj
 
-        # Initialize with engine-specific socket
+        # Initialize client: Docker via docker.from_env() (honors DOCKER_HOST),
+        # Podman via explicit socket path
         try:
-            self.client = docker.DockerClient(base_url=f"unix://{socket_path}")
+            if engine_obj == Engine.DOCKER:
+                # Use docker.from_env() to honor DOCKER_HOST, Docker contexts, rootless Docker, Colima, etc.
+                self.client = docker.from_env()
+            else:
+                # Podman: use engine-specific socket path
+                socket_path = get_socket_path(engine_obj)
+                self.client = docker.DockerClient(base_url=f"unix://{socket_path}")
         except Exception as e:
             engine_name = engine_obj.value.capitalize()
-            install_cmd = (
-                f"brew install {engine_obj.value}"
-                if engine_obj == Engine.DOCKER
-                else f"brew install {engine_obj.value}"
-            )
             raise RuntimeError(
                 f"{engine_name} is not running or not installed. "
-                f"Install with: {install_cmd}"
+                f"Install with: brew install {engine_obj.value}"
             ) from e
 
         self._verify_docker()
