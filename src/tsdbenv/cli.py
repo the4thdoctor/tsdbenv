@@ -78,7 +78,7 @@ def new(postgres, timescaledb, port, config, bind_ip, force):
         if compatible_versions:
             versions_str = ", ".join(compatible_versions)
             click.echo(f"   ℹ️  Compatible TSDB versions for PostgreSQL {postgres}: {versions_str}")
-        click.echo(f"   💡 Tip: Use --force to override compatibility check")
+        click.echo(f"   ⚠️  Use --force to override (database may not work correctly)")
         raise click.Abort()
 
     # Generate unique container name from current timestamp
