@@ -183,13 +183,33 @@ psql "postgresql://tsdbadmin:password@127.0.0.1:5433/tsdb" -c "\dx"
 
 ## Tablespaces
 
-Create custom tablespaces after connecting to a container:
+Create custom tablespaces after connecting to a container.
+
+**Setup (inside container):**
+
+```bash
+# Get container name
+tsdbenv -l
+
+# Execute commands in container
+docker exec -it tsdb-CONTAINER_NAME bash
+
+# As root, create tablespace directory with postgres ownership
+mkdir -p /var/lib/postgresql/ts_fast
+chown postgres:postgres /var/lib/postgresql/ts_fast
+chmod 700 /var/lib/postgresql/ts_fast
+
+# Exit container
+exit
+```
+
+**Create tablespace (via psql):**
 
 ```bash
 # Connect to container
 psql "postgresql://tsdbadmin:password@127.0.0.1:5433/tsdb"
 
-# Create tablespace (data persists while container runs)
+# Create tablespace
 CREATE TABLESPACE ts_fast LOCATION '/var/lib/postgresql/ts_fast';
 
 # Create table on specific tablespace
