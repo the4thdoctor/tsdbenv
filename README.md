@@ -106,9 +106,19 @@ Remove a container.
 
 ```bash
 tsdbenv remove tsdb-04d30960
+tsdbenv -r tsdb-04d30960
 ```
 
 Confirmation required. Gracefully handles containers no longer in Docker.
+
+### removeall
+Remove all containers at once.
+
+```bash
+tsdbenv removeall
+```
+
+Lists all containers and prompts for confirmation before removing. Useful for cleaning up after testing.
 
 ### connectstring
 Get psql command for a container.

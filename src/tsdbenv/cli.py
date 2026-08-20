@@ -73,7 +73,7 @@ def main(ctx, version):
         ctx.exit(0)
 
     if cli_state.docker_client is None:
-        click.echo("❌ Docker is not installed or not running.")
+        click.echo("[ERROR] Docker is not installed or not running.")
         click.echo("   Please install Docker: https://docs.docker.com/get-docker/")
         ctx.exit(1)
 
@@ -95,7 +95,7 @@ def main(ctx, version):
 def new(postgres, timescaledb, port, config, bind_ip, init, tablespaces, force):
     """Create a new PostgreSQL + TimescaleDB container."""
     # Refresh version matrix before creating container
-    click.echo("🔄 Checking for latest TimescaleDB versions...")
+    click.echo("[REFRESH] Checking for latest TimescaleDB versions...")
     cli_state.version_manager.refresh()
 
     if not postgres:
@@ -106,12 +106,12 @@ def new(postgres, timescaledb, port, config, bind_ip, init, tablespaces, force):
     if not force and not cli_state.version_manager.is_compatible(postgres, timescaledb):
         compatible_versions = cli_state.version_manager.get_compatible_timescaledb_versions(postgres)
         click.echo(
-            f"❌ TSDB {timescaledb} is not compatible with PostgreSQL {postgres}"
+            f"[ERROR] TSDB {timescaledb} is not compatible with PostgreSQL {postgres}"
         )
         if compatible_versions:
             versions_str = ", ".join(compatible_versions)
-            click.echo(f"   ℹ️  Compatible TSDB versions for PostgreSQL {postgres}: {versions_str}")
-        click.echo(f"   ⚠️  Use --force to override (database may not work correctly)")
+            click.echo(f"   [INFO]  Compatible TSDB versions for PostgreSQL {postgres}: {versions_str}")
+        click.echo(f"   [WARNING]  Use --force to override (database may not work correctly)")
         raise click.Abort()
 
     # Generate unique container name from current timestamp
@@ -122,7 +122,7 @@ def new(postgres, timescaledb, port, config, bind_ip, init, tablespaces, force):
         try:
             ConfigHandler.parse_file(Path(config))
         except Exception as e:
-            click.echo(f"❌ Failed to parse config: {e}")
+            click.echo(f"[ERROR] Failed to parse config: {e}")
             return
 
     # Default bind_ip to localhost if not specified
@@ -138,7 +138,7 @@ def new(postgres, timescaledb, port, config, bind_ip, init, tablespaces, force):
     # Auto-find available port if not specified
     if port is None:
         port = NetworkValidator.find_available_port(bind_ip)
-        click.echo(f"✅ Using port {port} (first available)")
+        click.echo(f"[OK] Using port {port} (first available)")
 
     tsdbadmin_password = generate_password()
 
@@ -153,7 +153,7 @@ def new(postgres, timescaledb, port, config, bind_ip, init, tablespaces, force):
             build_args={"PG_VERSION": postgres},
         )
     except Exception as e:
-        click.echo(f"❌ Failed to build Docker image: {e}")
+        click.echo(f"[ERROR] Failed to build Docker image: {e}")
         raise click.Abort()
 
     container_id = cli_state.docker_client.create_container(
@@ -182,28 +182,28 @@ def new(postgres, timescaledb, port, config, bind_ip, init, tablespaces, force):
     # Execute init SQL file if provided
     if init:
         try:
-            click.echo("📝 Waiting for PostgreSQL to be fully ready...")
+            click.echo("[INFO] Waiting for PostgreSQL to be fully ready...")
             cli_state.docker_client.wait_for_postgres(container_id, timeout=60)
-            click.echo("📝 Executing init SQL file...")
+            click.echo("[INFO] Executing init SQL file...")
             cli_state.docker_client.execute_sql_file(container_id, init)
-            click.echo("✅ Init SQL executed successfully")
+            click.echo("[OK] Init SQL executed successfully")
         except Exception as e:
-            click.echo(f"⚠️  Init SQL execution failed: {e}")
+            click.echo(f"[WARNING]  Init SQL execution failed: {e}")
             click.echo("   Container created but schema setup incomplete")
 
     # Create tablespaces if provided
     if tablespaces:
         try:
             ts_list = [ts.strip() for ts in tablespaces.split(",")]
-            click.echo(f"📦 Creating {len(ts_list)} tablespace(s)...")
+            click.echo(f"[ACTION] Creating {len(ts_list)} tablespace(s)...")
             results = cli_state.docker_client.create_tablespaces(container_id, ts_list)
             successful = sum(1 for v in results.values() if v)
-            click.echo(f"✅ Created {successful}/{len(ts_list)} tablespace(s)")
+            click.echo(f"[OK] Created {successful}/{len(ts_list)} tablespace(s)")
             if successful < len(ts_list):
                 failed = [k for k, v in results.items() if not v]
-                click.echo(f"   ⚠️  Failed: {', '.join(failed)}")
+                click.echo(f"   [WARNING]  Failed: {', '.join(failed)}")
         except Exception as e:
-            click.echo(f"⚠️  Tablespace creation failed: {e}")
+            click.echo(f"[WARNING]  Tablespace creation failed: {e}")
             click.echo("   Container created but tablespaces incomplete")
 
     display_connection_info(container)
@@ -289,7 +289,39 @@ def remove(container_name):
     if click.confirm(f"Remove container '{container_name}'? This cannot be undone."):
         cli_state.docker_client.remove_container(container.docker_id)
         cli_state.state_tracker.delete_container(container_name)
-        click.echo(f"✅ Container '{container_name}' removed.")
+        click.echo(f"[OK] Container '{container_name}' removed.")
+
+
+@main.command("removeall")
+def removeall():
+    """Remove all containers."""
+    containers = cli_state.state_tracker.load_containers()
+    if not containers:
+        click.echo("No containers found.")
+        return
+
+    click.echo(f"Found {len(containers)} container(s):")
+    for c in containers:
+        click.echo(f"  - {c.name} (PG {c.postgres_version}, TSDB {c.timescaledb_version})")
+
+    if not click.confirm("Remove all containers?"):
+        click.echo("Aborted.")
+        return
+
+    removed = 0
+    failed = 0
+    for container in containers:
+        try:
+            cli_state.docker_client.remove_container(container.docker_id)
+            cli_state.state_tracker.delete_container(container.name)
+            removed += 1
+        except Exception as e:
+            click.echo(f"[WARNING] Failed to remove {container.name}: {e}")
+            failed += 1
+
+    click.echo(f"[OK] Removed {removed}/{len(containers)} container(s)")
+    if failed > 0:
+        click.echo(f"[WARNING] {failed} container(s) failed to remove")
 
 
 @main.command()
@@ -326,7 +358,7 @@ def display_connection_info(container: Container) -> None:
     """Display connection information to the user."""
     connection_string = f"postgresql://tsdbadmin:{container.tsdbadmin_password}@{container.bind_ip}:{container.port}/tsdb"
     click.echo(f"""
-✅ Container '{container.name}' created successfully!
+[OK] Container '{container.name}' created successfully!
 
 Connect:
   psql "{connection_string}"
@@ -365,11 +397,11 @@ def show_interactive_menu() -> None:
 @main.command("versionrefresh")
 def versionrefresh():
     """Refresh TimescaleDB version compatibility matrix."""
-    click.echo("🔄 Fetching latest TimescaleDB versions...")
+    click.echo("[REFRESH] Fetching latest TimescaleDB versions...")
     matrix = cli_state.version_manager.refresh()
     versions_found = sum(len(v) for v in matrix.postgres_versions.values())
     pg_versions = len(matrix.postgres_versions)
-    click.echo(f"✅ Updated: {pg_versions} PostgreSQL versions, {versions_found} TimescaleDB versions")
+    click.echo(f"[OK] Updated: {pg_versions} PostgreSQL versions, {versions_found} TimescaleDB versions")
     click.echo(f"   Cached at: {cli_state.version_manager.cache_dir / cli_state.version_manager.CACHE_FILE}")
 
 
@@ -378,7 +410,7 @@ def show_matrix():
     """Display compatibility matrix as a table."""
     matrix = cli_state.version_manager.get_or_fetch()
     if not matrix.postgres_versions:
-        click.echo("❌ No compatibility data available")
+        click.echo("[ERROR] No compatibility data available")
         return
 
     rows = []
@@ -393,7 +425,7 @@ def show_matrix():
         table = tabulate(rows, headers=["PostgreSQL", "Compatible TimescaleDB Versions"], tablefmt="grid")
         click.echo(table)
     else:
-        click.echo("❌ No compatibility data available")
+        click.echo("[ERROR] No compatibility data available")
 
 
 if __name__ == "__main__":
