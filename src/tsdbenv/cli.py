@@ -88,7 +88,7 @@ def init_cli_state(engine: Engine) -> None:
         raise click.Abort()
 
 
-@click.group(context_settings={"help_option_names": ["-h", "--help"]})
+@click.group(context_settings={"help_option_names": ["-h", "--help"]}, invoke_without_command=True)
 @click.option("-v", "--version", is_flag=True, help="Show version and exit")
 @click.pass_context
 def main(ctx, version):
