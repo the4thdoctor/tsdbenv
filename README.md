@@ -139,6 +139,26 @@ List extensions in container:
 psql "postgresql://tsdbadmin:password@127.0.0.1:5433/tsdb" -c "\dx"
 ```
 
+## Tablespaces
+
+Create custom tablespaces after connecting to a container:
+
+```bash
+# Connect to container
+psql "postgresql://tsdbadmin:password@127.0.0.1:5433/tsdb"
+
+# Create tablespace (data persists while container runs)
+CREATE TABLESPACE ts_fast LOCATION '/var/lib/postgresql/ts_fast';
+
+# Create table on specific tablespace
+CREATE TABLE my_table (id INT, data TEXT) TABLESPACE ts_fast;
+
+# List tablespaces
+\db
+```
+
+**Note:** Tablespaces are ephemeral — data is lost when the container stops. For persistent tablespaces, use a bind-mounted volume on the host.
+
 ## Examples
 
 ### Create and connect to a container
