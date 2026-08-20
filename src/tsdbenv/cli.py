@@ -185,7 +185,6 @@ def new(postgres, timescaledb, port, config, bind_ip, init, tablespaces, force):
     # Auto-find available port if not specified
     if port is None:
         port = NetworkValidator.find_available_port(bind_ip)
-        click.echo(f"[OK] Using port {port} (first available)")
 
     tsdbadmin_password = generate_password()
 
@@ -193,7 +192,6 @@ def new(postgres, timescaledb, port, config, bind_ip, init, tablespaces, force):
     try:
         dockerfile_dir = str(get_dockerfiles_dir())
         image_tag = f"tsdbenv:pg{postgres}-latest"
-        click.echo(f"Building Docker image {image_tag}...")
         cli_state.docker_client.build_image(
             dockerfile_dir=dockerfile_dir,
             tag=image_tag,
