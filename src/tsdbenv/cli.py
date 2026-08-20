@@ -18,6 +18,21 @@ def _expand_short_aliases():
     if len(sys.argv) <= 1:
         return
 
+    # Move --engine/-e to the front if present but not already there
+    for i in range(1, len(sys.argv)):
+        if sys.argv[i] in ("--engine", "-e") and i > 1:
+            # Found engine flag after position 1, move it and its value to the front
+            if i + 1 < len(sys.argv):
+                engine_flag = sys.argv[i]
+                engine_value = sys.argv[i + 1]
+                # Remove from current position
+                sys.argv.pop(i + 1)
+                sys.argv.pop(i)
+                # Insert at position 1
+                sys.argv.insert(1, engine_value)
+                sys.argv.insert(1, engine_flag)
+            break
+
     aliases = {"-n": "new", "-l": "list", "-r": "remove", "-c": "connectstring", "-g": "versionrefresh", "-m": "matrix", "-a": "removeall", "-t": "tablespaces"}
 
     # Find the first positional argument (command) - skip option names and their values
