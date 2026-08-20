@@ -273,9 +273,9 @@ class DockerClient:
                 # Set permissions to 700
                 container.exec_run(f"chmod 700 {ts_path}", user="root")
 
-                # Create tablespace in PostgreSQL
+                # Create tablespace in PostgreSQL (use postgres user, guaranteed to exist)
                 result = container.exec_run(
-                    f"psql -U tsdbadmin -d tsdb -c \"CREATE TABLESPACE {ts_name} LOCATION '{ts_path}';\"",
+                    f"psql -U postgres -d tsdb -c \"CREATE TABLESPACE {ts_name} LOCATION '{ts_path}';\"",
                     user="postgres",
                 )
                 if result.exit_code == 0:
@@ -318,9 +318,9 @@ class DockerClient:
         tar_stream.seek(0)
         container.put_archive("/tmp", tar_stream)
 
-        # Execute SQL file
+        # Execute SQL file (use postgres user, guaranteed to exist at this point)
         result = container.exec_run(
-            f"psql -U tsdbadmin -d {database} -f /tmp/init.sql",
+            f"psql -U postgres -d {database} -f /tmp/init.sql",
             user="postgres",
         )
         if result.exit_code != 0:
