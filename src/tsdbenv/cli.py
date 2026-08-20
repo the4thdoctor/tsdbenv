@@ -177,6 +177,8 @@ def new(postgres, timescaledb, port, config, bind_ip, init, force):
     # Execute init SQL file if provided
     if init:
         try:
+            click.echo("📝 Waiting for PostgreSQL to be fully ready...")
+            cli_state.docker_client.wait_for_postgres(container_id, timeout=60)
             click.echo("📝 Executing init SQL file...")
             cli_state.docker_client.execute_sql_file(container_id, init)
             click.echo("✅ Init SQL executed successfully")
