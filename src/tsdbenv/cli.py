@@ -232,6 +232,36 @@ def remove(container_name):
         click.echo(f"✅ Container '{container_name}' removed.")
 
 
+@main.command()
+@click.argument("container_name", required=False)
+def connectstring(container_name):
+    """Get connection string for a container."""
+    if not container_name:
+        containers = cli_state.state_tracker.load_containers()
+        if not containers:
+            click.echo("No containers found.")
+            return
+        container_name = click.prompt(
+            "Container name", type=click.Choice([c.name for c in containers])
+        )
+
+    container = next(
+        (
+            c
+            for c in cli_state.state_tracker.load_containers()
+            if c.name == container_name
+        ),
+        None,
+    )
+    if not container:
+        click.echo(f"Container '{container_name}' not found.")
+        return
+
+    connection_string = f"postgresql://tsdbadmin:{container.tsdbadmin_password}@{container.bind_ip}:{container.port}/tsdb"
+    click.echo(connection_string)
+    cli_state.state_tracker.mark_accessed(container_name)
+
+
 def display_connection_info(container: Container) -> None:
     """Display connection information to the user."""
     connection_string = f"postgresql://tsdbadmin:{container.tsdbadmin_password}@{container.bind_ip}:{container.port}/tsdb"
