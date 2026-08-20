@@ -7,17 +7,21 @@ from datetime import datetime
 from pathlib import Path
 
 import click
+from tabulate import tabulate
 
 from tsdbenv import __version__
 
 
 # Preprocess argv to expand short aliases before Click parses
 def _expand_short_aliases():
-    """Expand -n, -l, -c, -vr to full command names."""
+    """Expand -n, -l, -c, -vr, -m to full command names."""
     if len(sys.argv) > 1:
-        # Special case: -vr → versionrefresh (before -r → remove mapping)
+        # Special cases (before general aliases mapping)
         if sys.argv[1] == "-vr":
             sys.argv[1] = "versionrefresh"
+            return
+        if sys.argv[1] == "-m":
+            sys.argv[1] = "matrix"
             return
         aliases = {"-n": "new", "-l": "list", "-r": "remove", "-c": "connectstring"}
         if sys.argv[1] in aliases:
@@ -334,6 +338,29 @@ def versionrefresh():
     pg_versions = len(matrix.postgres_versions)
     click.echo(f"✅ Updated: {pg_versions} PostgreSQL versions, {versions_found} TimescaleDB versions")
     click.echo(f"   Cached at: {cli_state.version_manager.cache_dir / cli_state.version_manager.CACHE_FILE}")
+
+
+@main.command("matrix")
+def show_matrix():
+    """Display compatibility matrix as a table."""
+    matrix = cli_state.version_manager.get_or_fetch()
+    if not matrix.postgres_versions:
+        click.echo("❌ No compatibility data available")
+        return
+
+    rows = []
+    for pg_ver in sorted(matrix.postgres_versions.keys(), key=lambda x: int(x)):
+        tsdb_versions = matrix.postgres_versions[pg_ver]
+        if tsdb_versions:
+            versions_str = ", ".join(tsdb_versions)
+            rows.append([f"PostgreSQL {pg_ver}", versions_str])
+
+    if rows:
+        click.echo("\nPostgreSQL × TimescaleDB Compatibility Matrix:\n")
+        table = tabulate(rows, headers=["PostgreSQL", "Compatible TimescaleDB Versions"], tablefmt="grid")
+        click.echo(table)
+    else:
+        click.echo("❌ No compatibility data available")
 
 
 if __name__ == "__main__":
