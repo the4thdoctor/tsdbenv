@@ -13,8 +13,12 @@ from tsdbenv import __version__
 
 # Preprocess argv to expand short aliases before Click parses
 def _expand_short_aliases():
-    """Expand -n, -l, -r, -c to full command names."""
+    """Expand -n, -l, -c, -vr to full command names."""
     if len(sys.argv) > 1:
+        # Special case: -vr → versionrefresh (before -r → remove mapping)
+        if sys.argv[1] == "-vr":
+            sys.argv[1] = "versionrefresh"
+            return
         aliases = {"-n": "new", "-l": "list", "-r": "remove", "-c": "connectstring"}
         if sys.argv[1] in aliases:
             sys.argv[1] = aliases[sys.argv[1]]
@@ -330,14 +334,6 @@ def versionrefresh():
     pg_versions = len(matrix.postgres_versions)
     click.echo(f"✅ Updated: {pg_versions} PostgreSQL versions, {versions_found} TimescaleDB versions")
     click.echo(f"   Cached at: {cli_state.version_manager.cache_dir / cli_state.version_manager.CACHE_FILE}")
-
-
-# Add short alias for versionrefresh
-@main.command("vr", hidden=True)
-def versionrefresh_alias():
-    """Refresh TimescaleDB version compatibility matrix."""
-    ctx = click.get_current_context()
-    ctx.invoke(versionrefresh)
 
 
 if __name__ == "__main__":
