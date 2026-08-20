@@ -321,6 +321,24 @@ def show_interactive_menu() -> None:
         ctx.invoke(remove, container_name=None)
 
 
-# Short command aliases (hidden from help)
+@main.command("versionrefresh")
+def versionrefresh():
+    """Refresh TimescaleDB version compatibility matrix."""
+    click.echo("🔄 Fetching latest TimescaleDB versions...")
+    matrix = cli_state.version_manager.refresh()
+    versions_found = sum(len(v) for v in matrix.postgres_versions.values())
+    pg_versions = len(matrix.postgres_versions)
+    click.echo(f"✅ Updated: {pg_versions} PostgreSQL versions, {versions_found} TimescaleDB versions")
+    click.echo(f"   Cached at: {cli_state.version_manager.cache_dir / cli_state.version_manager.CACHE_FILE}")
+
+
+# Add short alias for versionrefresh
+@main.command("vr", hidden=True)
+def versionrefresh_alias():
+    """Refresh TimescaleDB version compatibility matrix."""
+    ctx = click.get_current_context()
+    ctx.invoke(versionrefresh)
+
+
 if __name__ == "__main__":
     main()
