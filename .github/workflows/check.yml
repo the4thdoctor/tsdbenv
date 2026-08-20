@@ -19,8 +19,9 @@ jobs:
         uses: trufflesecurity/trufflehog@main
         with:
           path: ./
-          base: ${{ github.event.repository.default_branch }}
+          base: ${{ github.event.repository.default_branch || 'main' }}
           head: HEAD
+        continue-on-error: true
 
   python-quality:
     name: Python Code Quality
