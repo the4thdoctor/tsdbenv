@@ -182,6 +182,17 @@ class DockerClient:
                 for internal_port, external_port in ports.items():
                     docker_ports[f"{internal_port}/tcp"] = (bind_ip, external_port)
 
+            run_kwargs = {}
+            if self.engine == "podman":
+                # Podman's Docker-compat API defaults to the CNI "podman"
+                # bridge network, which needs iptables/nftables for port
+                # NAT. Rootless hosts without those kernel modules (common
+                # on locked-down/shared machines) fail there with a 500 on
+                # start. The native podman CLI instead defaults rootless
+                # containers to slirp4netns, a userspace network stack that
+                # needs no iptables, so request it explicitly here too.
+                run_kwargs["network_mode"] = "slirp4netns"
+
             container = self.client.containers.run(
                 image,
                 name=name,
@@ -191,6 +202,7 @@ class DockerClient:
                 detach=True,
                 remove=False,  # Keep container even if stopped
                 hostname=name,
+                **run_kwargs,
             )
             # Wait for PostgreSQL to be ready
             self.wait_for_postgres(container.id)
