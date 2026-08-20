@@ -8,13 +8,43 @@ from typing import Dict, List, Optional
 import docker
 import docker.errors
 
+from tsdbenv.engine_config import Engine, get_engine_from_cli_or_env, get_socket_path
+
 
 class DockerClient:
     """Wrapper around Docker SDK for container lifecycle management."""
 
-    def __init__(self) -> None:
-        """Initialize Docker client from environment."""
-        self.client = docker.from_env()
+    def __init__(self, engine: Optional[str] = None) -> None:
+        """Initialize Docker client with engine-specific socket.
+
+        Args:
+            engine: Optional container engine ("docker" or "podman").
+                   Defaults to Docker if not specified or TSDBENV_ENGINE not set.
+
+        Raises:
+            RuntimeError: If the engine socket is not accessible.
+            ValueError: If engine value is invalid.
+        """
+        # Resolve engine from CLI/env/default
+        engine_obj = get_engine_from_cli_or_env(engine)
+        socket_path = get_socket_path(engine_obj)
+        self._engine = engine_obj
+
+        # Initialize with engine-specific socket
+        try:
+            self.client = docker.DockerClient(base_url=f"unix://{socket_path}")
+        except Exception as e:
+            engine_name = engine_obj.value.capitalize()
+            install_cmd = (
+                f"brew install {engine_obj.value}"
+                if engine_obj == Engine.DOCKER
+                else f"brew install {engine_obj.value}"
+            )
+            raise RuntimeError(
+                f"{engine_name} is not running or not installed. "
+                f"Install with: {install_cmd}"
+            ) from e
+
         self._verify_docker()
 
     def check_docker_installed(self) -> bool:
@@ -28,7 +58,11 @@ class DockerClient:
     def _verify_docker(self) -> None:
         """Verify Docker is running; raise RuntimeError if not."""
         if not self.check_docker_installed():
-            raise RuntimeError("Docker daemon is not running or not accessible")
+            engine_name = self._engine.value.capitalize()
+            raise RuntimeError(
+                f"{engine_name} is not running or not accessible. "
+                f"Install with: brew install {self._engine.value}"
+            )
 
     def build_image(
         self,
