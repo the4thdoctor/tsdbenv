@@ -1,0 +1,80 @@
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+## [1.0.0] - 2026-08-20
+
+### Added
+- **Podman support** as optional container engine alongside Docker
+  - `--engine docker|podman` CLI flag for explicit engine selection
+  - `TSDBENV_ENGINE` environment variable for engine override (CLI > env > default)
+  - Automatic socket path detection for both engines
+  - Graceful test skip when Podman unavailable
+  - Network mode configuration (Docker bridge vs Podman slirp4netns)
+  - Full documentation in `docs/PODMAN.md`
+
+- **Comprehensive test coverage**
+  - 16 unit tests for engine selection logic and socket path resolution
+  - 16 unit tests for CLI --engine option parsing
+  - 9 unit tests for DockerClient engine parameter handling
+  - 7 integration tests for real Podman container lifecycle
+  - Total: 113+ tests with 80%+ code coverage
+
+- **Code quality infrastructure**
+  - Black code formatter with pinned version (24.1.1)
+  - isort import sorter with black profile (5.13.2)
+  - flake8 linter (7.0.0)
+  - mypy static type checker (1.8.0)
+  - pylint for additional linting (3.0.3)
+  - bandit for security scanning (1.7.5)
+  - GitHub Actions CI/CD workflow for all checks
+
+- **Developer experience**
+  - Pinned dev tool versions in requirements.txt for consistency
+  - pyproject.toml configuration for black and isort
+  - Comprehensive inline documentation
+  - CLAUDE.md for future contributors
+
+### Fixed
+- Docker regression: restored `docker.from_env()` for Docker engine to support DOCKER_HOST env var, Docker contexts, rootless Docker, and Colima
+- Podman socket path: use rootless socket `/run/user/$UID/podman/podman.sock` instead of rootful `/run/podman/podman.sock`
+- Type annotations: fixed mypy errors with explicit `DockerClient | None` type hints
+- Formatting conflicts: resolved black/isort incompatibility with isort black profile
+
+### Architecture
+- **Engine abstraction layer** (`src/tsdbenv/engine_config.py`):
+  - Single source of truth for engine-to-socket mapping
+  - Enum-based engine selection
+  - CLI/env precedence logic
+  - EngineConfig dataclass for engine-specific settings
+
+- **Docker client initialization** (`src/tsdbenv/docker_utils.py`):
+  - Engine parameter passed to DockerClient
+  - Conditional logic: `docker.from_env()` for Docker, explicit socket path for Podman
+  - Clear error messages when engine unavailable
+
+- **CLI integration** (`src/tsdbenv/cli.py`):
+  - Global --engine option at Click group level
+  - Engine context passed to all subcommands
+  - CLIState reinitialization with selected engine
+
+### Breaking Changes
+None. Docker remains default, zero impact on existing workflows.
+
+### Testing
+- All 113+ tests pass
+- 80%+ code coverage
+- Podman integration tests skip gracefully if socket unavailable
+- No CI failures on any test
+
+### Documentation
+- `README.md` — updated with --engine flag usage
+- `docs/PODMAN.md` — 391 lines covering installation, setup, network modes, troubleshooting
+- `CLAUDE.md` — developer guide for future maintainers
+- Inline docstrings throughout codebase
+
+---
+
+## [0.1.0] - 2026-08-19
+
+Initial release with Docker support, version compatibility matrix, and container lifecycle management.
