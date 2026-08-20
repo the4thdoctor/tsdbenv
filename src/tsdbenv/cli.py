@@ -235,7 +235,7 @@ def remove(container_name):
 @main.command()
 @click.argument("container_name", required=False)
 def connectstring(container_name):
-    """Get connection string for a container."""
+    """Get psql command for a container."""
     if not container_name:
         containers = cli_state.state_tracker.load_containers()
         if not containers:
@@ -258,7 +258,7 @@ def connectstring(container_name):
         return
 
     connection_string = f"postgresql://tsdbadmin:{container.tsdbadmin_password}@{container.bind_ip}:{container.port}/tsdb"
-    click.echo(connection_string)
+    click.echo(f'psql "{connection_string}"')
     cli_state.state_tracker.mark_accessed(container_name)
 
 
