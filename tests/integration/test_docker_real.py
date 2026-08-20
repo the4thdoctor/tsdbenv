@@ -269,12 +269,12 @@ class TestRealTsdbenvImage:
         password = f"test_pwd_{uuid.uuid4().hex[:8]}"
 
         try:
-            # Create and start container
+            # Create and start container (use random port to avoid conflicts)
             container_id = client.create_container(
                 image=built_image,
                 name=container_name,
                 environment={"POSTGRES_PASSWORD": "postgres"},
-                ports={5432: 5432},
+                ports={5432: None},
                 tsdbadmin_password=password,
             )
             cleanup_containers(container_id)
