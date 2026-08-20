@@ -273,11 +273,9 @@ pytest.mark.skipif(
 ### Task 9: Phase 3 Documentation
 
 **Files:**
-- Modify: `CLAUDE.md` (add Phase 3 info)
 - Create: `docs/PHASE3.md` (Phase 3 design summary)
 
 **Steps:**
-1. Update CLAUDE.md with Phase 3 note: "Docker SDK fully integrated; real containers"
 2. Write PHASE3.md summary
 3. Commit: "docs: add Phase 3 documentation"
 

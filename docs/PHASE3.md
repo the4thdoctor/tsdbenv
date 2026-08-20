@@ -258,7 +258,6 @@ Generates HTML report in `htmlcov/index.html` with per-file and per-function bre
 ---
 
 **Related Documentation**:
-- [CLAUDE.md](../CLAUDE.md) — Project overview and architecture
 - [Dockerfile](../Dockerfile) — Container image definition
 - [docker_utils.py](../src/tsdbenv/docker_utils.py) — Docker SDK wrapper
 
