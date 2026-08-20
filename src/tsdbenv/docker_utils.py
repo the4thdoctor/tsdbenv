@@ -191,6 +191,43 @@ class DockerClient:
             time.sleep(1)
         raise TimeoutError(f"PostgreSQL not ready after {timeout}s")
 
+    def create_tablespaces(self, container_id: str, tablespace_names: List[str]) -> Dict[str, bool]:
+        """Create tablespaces in container.
+
+        Args:
+            container_id: Container ID
+            tablespace_names: List of tablespace names
+
+        Returns:
+            Dict mapping tablespace name to success status
+        """
+        container = self.client.containers.get(container_id)
+        results = {}
+
+        for ts_name in tablespace_names:
+            ts_path = f"/var/lib/postgresql/{ts_name}"
+            try:
+                # Create directory
+                container.exec_run(f"mkdir -p {ts_path}", user="root")
+                # Set ownership to postgres
+                container.exec_run(f"chown postgres:postgres {ts_path}", user="root")
+                # Set permissions to 700
+                container.exec_run(f"chmod 700 {ts_path}", user="root")
+
+                # Create tablespace in PostgreSQL
+                result = container.exec_run(
+                    f"psql -U tsdbadmin -d tsdb -c \"CREATE TABLESPACE {ts_name} LOCATION '{ts_path}';\"",
+                    user="postgres",
+                )
+                if result.exit_code == 0:
+                    results[ts_name] = True
+                else:
+                    results[ts_name] = False
+            except Exception:
+                results[ts_name] = False
+
+        return results
+
     def execute_sql_file(self, container_id: str, sql_file_path: str, database: str = "tsdb") -> str:
         """Execute SQL file in container via psql.
 

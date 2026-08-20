@@ -67,6 +67,7 @@ tsdbenv new --postgres 14 --timescaledb 2.10.0 --bind-ip 127.0.0.1
 - `--port PORT` — PostgreSQL port (auto-detected if not specified)
 - `--config PATH` — PostgreSQL config file (optional)
 - `--init PATH` — SQL file to execute after container creation
+- `--tablespaces NAMES` — Comma-separated tablespace names to create
 - `--force` — Skip version compatibility check
 
 **Features:**
@@ -149,6 +150,16 @@ tsdbenv -g                                        # versionrefresh (get versions
 tsdbenv -m                                        # matrix
 tsdbenv -v                                        # version
 tsdbenv -h                                        # help
+tsdbenv -t "fast,archive"                         # tablespaces
+```
+
+**Combine multiple options:**
+
+```bash
+tsdbenv -n --postgres 16 \
+  --timescaledb 2.29.2 \
+  -t "fast,archive" \
+  --init schema.sql
 ```
 
 ## Connection
@@ -219,41 +230,42 @@ tsdbenv -n --postgres 15 --timescaledb 2.10.0 --init schema.sql
 
 ## Tablespaces
 
-Create custom tablespaces after connecting to a container.
+Create and use custom tablespaces automatically during container creation.
 
-**Setup (inside container):**
+**Automatic tablespace creation:**
 
 ```bash
-# Get container name
-tsdbenv -l
+# Create container with multiple tablespaces
+tsdbenv -n --postgres 16 --timescaledb 2.29.2 --tablespaces "fast,archive,cold"
 
-# Execute commands in container
-docker exec -it tsdb-CONTAINER_NAME bash
-
-# As root, create tablespace directory with postgres ownership
-mkdir -p /var/lib/postgresql/ts_fast
-chown postgres:postgres /var/lib/postgresql/ts_fast
-chmod 700 /var/lib/postgresql/ts_fast
-
-# Exit container
-exit
+# Short flag
+tsdbenv -n --postgres 16 --tablespaces "hot,warm,cold"
+tsdbenv -n --postgres 16 -t "hot,warm,cold"
 ```
 
-**Create tablespace (via psql):**
+**Use tablespaces for performance testing:**
 
 ```bash
 # Connect to container
 psql "postgresql://tsdbadmin:password@127.0.0.1:5433/tsdb"
 
-# Create tablespace
-CREATE TABLESPACE ts_fast LOCATION '/var/lib/postgresql/ts_fast';
-
 # Create table on specific tablespace
-CREATE TABLE my_table (id INT, data TEXT) TABLESPACE ts_fast;
+CREATE TABLE metrics_fast (
+    time TIMESTAMPTZ,
+    data FLOAT
+) TABLESPACE fast;
+
+SELECT create_hypertable('metrics_fast', 'time');
 
 # List tablespaces
 \db
 ```
+
+**Features:**
+- Automatic directory creation with proper permissions
+- Full PostgreSQL integration (ready to use immediately)
+- No manual `docker exec` or `chown` commands needed
+- Perfect for testing storage performance characteristics
 
 **Note:** Tablespaces are ephemeral — data is lost when the container stops. For persistent tablespaces, use a bind-mounted volume on the host.
 

@@ -26,6 +26,10 @@ def _expand_short_aliases():
         aliases = {"-n": "new", "-l": "list", "-r": "remove", "-c": "connectstring"}
         if sys.argv[1] in aliases:
             sys.argv[1] = aliases[sys.argv[1]]
+        # Convert -t VALUE to --tablespaces VALUE
+        if "-t" in sys.argv and len(sys.argv) > sys.argv.index("-t") + 1:
+            idx = sys.argv.index("-t")
+            sys.argv[idx] = "--tablespaces"
 
 
 _expand_short_aliases()
@@ -86,8 +90,9 @@ def main(ctx, version):
 )
 @click.option("--bind-ip", help="IP to bind container to (default: 127.0.0.1)")
 @click.option("--init", type=click.Path(exists=True), help="SQL file to execute after container creation")
+@click.option("--tablespaces", help="Comma-separated tablespace names to create (e.g., fast,archive)")
 @click.option("--force", is_flag=True, help="Override version compatibility check")
-def new(postgres, timescaledb, port, config, bind_ip, init, force):
+def new(postgres, timescaledb, port, config, bind_ip, init, tablespaces, force):
     """Create a new PostgreSQL + TimescaleDB container."""
     # Refresh version matrix before creating container
     click.echo("🔄 Checking for latest TimescaleDB versions...")
@@ -185,6 +190,21 @@ def new(postgres, timescaledb, port, config, bind_ip, init, force):
         except Exception as e:
             click.echo(f"⚠️  Init SQL execution failed: {e}")
             click.echo("   Container created but schema setup incomplete")
+
+    # Create tablespaces if provided
+    if tablespaces:
+        try:
+            ts_list = [ts.strip() for ts in tablespaces.split(",")]
+            click.echo(f"📦 Creating {len(ts_list)} tablespace(s)...")
+            results = cli_state.docker_client.create_tablespaces(container_id, ts_list)
+            successful = sum(1 for v in results.values() if v)
+            click.echo(f"✅ Created {successful}/{len(ts_list)} tablespace(s)")
+            if successful < len(ts_list):
+                failed = [k for k, v in results.items() if not v]
+                click.echo(f"   ⚠️  Failed: {', '.join(failed)}")
+        except Exception as e:
+            click.echo(f"⚠️  Tablespace creation failed: {e}")
+            click.echo("   Container created but tablespaces incomplete")
 
     display_connection_info(container)
 
