@@ -1,0 +1,75 @@
+#!/bin/sh
+
+# Configuration
+SOCKET_DIR="/var/run/podman"
+SOCKET_PATH="$SOCKET_DIR/podman.sock"
+PODMAN_SOCKET="unix://$SOCKET_PATH"
+PIDFILE="/var/run/podman.pid"
+SOCKET_GROUP="podman"  # Change to your preferred group (e.g., "podman" or "users")
+SOCKET_PERMS="0660"   # Read/Write for owner and group
+
+podman_start() {
+  if [ -f "$PIDFILE" ] && kill -0 $(cat "$PIDFILE") 2>/dev/null; then
+    echo "Podman service is already running."
+    exit 0
+  fi
+  echo "Starting Podman API service..."
+  
+  # Ensure target directory exists with correct permissions
+  mkdir -p "$SOCKET_DIR"
+  chmod 0755 "$SOCKET_DIR"
+
+  # Clean up stale socket file if left over from a crash
+  rm -f "$SOCKET_PATH"
+
+  # Start podman service in the background
+  /usr/bin/podman system service --time 0 "$PODMAN_SOCKET" > /dev/null 2>&1 &
+  echo $! > "$PIDFILE"
+
+  # Wait briefly for the socket file to be created, then adjust permissions
+  i=0
+  while [ ! -S "$SOCKET_PATH" ] && [ $i -lt 10 ]; do
+    sleep 0.5
+    i=$((i + 1))
+  done
+
+  if [ -S "$SOCKET_PATH" ]; then
+    chgrp "$SOCKET_GROUP" "$SOCKET_PATH"
+    chmod "$SOCKET_PERMS" "$SOCKET_PATH"
+    echo "Socket created at $SOCKET_PATH (Group: $SOCKET_GROUP, Mode: $SOCKET_PERMS)"
+  else
+    echo "Error: Socket failed to initialize."
+  fi
+}
+
+podman_stop() {
+  echo "Stopping Podman API service..."
+  if [ -f "$PIDFILE" ]; then
+    kill $(cat "$PIDFILE") 2>/dev/null
+    rm -f "$PIDFILE"
+  else
+    pkill -f "podman system service"
+  fi
+  rm -f "$SOCKET_PATH"
+}
+
+podman_restart() {
+  podman_stop
+  sleep 1
+  podman_start
+}
+
+case "$1" in
+  'start')
+    podman_start
+    ;;
+  'stop')
+    podman_stop
+    ;;
+  'restart')
+    podman_restart
+    ;;
+  *)
+    echo "usage $0 start|stop|restart"
+    ;;
+esac
