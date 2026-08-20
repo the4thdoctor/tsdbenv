@@ -59,19 +59,28 @@ class CLIState:
         self.state_dir = ensure_state_dir()
         self.state_tracker = StateTracker(state_dir=self.state_dir)
         self.version_manager = VersionManager(cache_dir=self.state_dir)
+        self.docker_client: DockerClient | None = None
         try:
             self.docker_client = DockerClient(engine=engine.value)
         except RuntimeError:
-            self.docker_client = None
+            pass
 
 
 # Initialize with default engine; will be reinitialized in main() with CLI/env engine
 cli_state = CLIState()
 
 
-@click.group(invoke_without_command=True, context_settings={"help_option_names": ["-h", "--help"]})
+@click.group(
+    invoke_without_command=True,
+    context_settings={"help_option_names": ["-h", "--help"]},
+)
 @click.option("-v", "--version", is_flag=True, help="Show version and exit")
-@click.option("--engine", type=click.Choice(["docker", "podman"]), default=None, help="Container engine (default: docker)")
+@click.option(
+    "--engine",
+    type=click.Choice(["docker", "podman"]),
+    default=None,
+    help="Container engine (default: docker)",
+)
 @click.pass_context
 def main(ctx, version, engine):
     """tsdbenv - PostgreSQL + TimescaleDB environment manager."""
@@ -114,8 +123,15 @@ def main(ctx, version, engine):
     "--config", type=click.Path(exists=True), help="PostgreSQL config file path"
 )
 @click.option("--bind-ip", help="IP to bind container to (default: 127.0.0.1)")
-@click.option("--init", type=click.Path(exists=True), help="SQL file to execute after container creation")
-@click.option("--tablespaces", help="Comma-separated tablespace names to create (e.g., fast,archive)")
+@click.option(
+    "--init",
+    type=click.Path(exists=True),
+    help="SQL file to execute after container creation",
+)
+@click.option(
+    "--tablespaces",
+    help="Comma-separated tablespace names to create (e.g., fast,archive)",
+)
 @click.option("--force", is_flag=True, help="Override version compatibility check")
 def new(postgres, timescaledb, port, config, bind_ip, init, tablespaces, force):
     """Create PostgreSQL + TimescaleDB container (-n)"""
@@ -129,14 +145,20 @@ def new(postgres, timescaledb, port, config, bind_ip, init, tablespaces, force):
         timescaledb = click.prompt("TimescaleDB version", type=str)
 
     if not force and not cli_state.version_manager.is_compatible(postgres, timescaledb):
-        compatible_versions = cli_state.version_manager.get_compatible_timescaledb_versions(postgres)
+        compatible_versions = (
+            cli_state.version_manager.get_compatible_timescaledb_versions(postgres)
+        )
         click.echo(
             f"[ERROR] TSDB {timescaledb} is not compatible with PostgreSQL {postgres}"
         )
         if compatible_versions:
             versions_str = ", ".join(compatible_versions)
-            click.echo(f"   [INFO]  Compatible TSDB versions for PostgreSQL {postgres}: {versions_str}")
-        click.echo(f"   [WARNING]  Use --force to override (database may not work correctly)")
+            click.echo(
+                f"   [INFO]  Compatible TSDB versions for PostgreSQL {postgres}: {versions_str}"
+            )
+        click.echo(
+            f"   [WARNING]  Use --force to override (database may not work correctly)"
+        )
         raise click.Abort()
 
     # Generate unique container name from current timestamp
@@ -328,7 +350,9 @@ def removeall(force):
 
     click.echo(f"Found {len(containers)} container(s):")
     for c in containers:
-        click.echo(f"  - {c.name} (PG {c.postgres_version}, TSDB {c.timescaledb_version})")
+        click.echo(
+            f"  - {c.name} (PG {c.postgres_version}, TSDB {c.timescaledb_version})"
+        )
 
     if not force and not click.confirm("Remove all containers?"):
         click.echo("Aborted.")
@@ -427,8 +451,12 @@ def versionrefresh():
     matrix = cli_state.version_manager.refresh()
     versions_found = sum(len(v) for v in matrix.postgres_versions.values())
     pg_versions = len(matrix.postgres_versions)
-    click.echo(f"[OK] Updated: {pg_versions} PostgreSQL versions, {versions_found} TimescaleDB versions")
-    click.echo(f"   Cached at: {cli_state.version_manager.cache_dir / cli_state.version_manager.CACHE_FILE}")
+    click.echo(
+        f"[OK] Updated: {pg_versions} PostgreSQL versions, {versions_found} TimescaleDB versions"
+    )
+    click.echo(
+        f"   Cached at: {cli_state.version_manager.cache_dir / cli_state.version_manager.CACHE_FILE}"
+    )
 
 
 @main.command("matrix")
@@ -448,7 +476,11 @@ def show_matrix():
 
     if rows:
         click.echo("\nPostgreSQL × TimescaleDB Compatibility Matrix:\n")
-        table = tabulate(rows, headers=["PostgreSQL", "Compatible TimescaleDB Versions"], tablefmt="grid")
+        table = tabulate(
+            rows,
+            headers=["PostgreSQL", "Compatible TimescaleDB Versions"],
+            tablefmt="grid",
+        )
         click.echo(table)
     else:
         click.echo("[ERROR] No compatibility data available")

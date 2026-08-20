@@ -73,7 +73,7 @@ class VersionManager:
             response.raise_for_status()
             data = response.json()
 
-            matrix = {}
+            matrix: dict[str, list[str]] = {}
             for tag in data.get("results", []):
                 name = tag.get("name", "")
                 # Parse tags like: 2.29.2-pg18, latest-pg16-oss, 2.28.0-pg17
@@ -87,7 +87,9 @@ class VersionManager:
 
             # Sort versions descending (newest first)
             for pg_ver in matrix:
-                matrix[pg_ver].sort(reverse=True, key=lambda x: tuple(map(int, x.split("."))))
+                matrix[pg_ver].sort(
+                    reverse=True, key=lambda x: tuple(map(int, x.split(".")))
+                )
 
             # Merge with fallback: combine versions for shared PG versions
             merged_matrix = dict(self.FALLBACK_MATRIX)
@@ -95,13 +97,17 @@ class VersionManager:
                 if pg_ver in merged_matrix:
                     # Combine and deduplicate versions
                     combined = list(set(merged_matrix[pg_ver] + tsdb_versions))
-                    combined.sort(reverse=True, key=lambda x: tuple(map(int, x.split("."))))
+                    combined.sort(
+                        reverse=True, key=lambda x: tuple(map(int, x.split(".")))
+                    )
                     merged_matrix[pg_ver] = combined
                 else:
                     merged_matrix[pg_ver] = tsdb_versions
 
             if matrix:
-                return VersionMatrix(postgres_versions=merged_matrix, last_fetched=datetime.now())
+                return VersionMatrix(
+                    postgres_versions=merged_matrix, last_fetched=datetime.now()
+                )
             return self._fallback_matrix()
         except (requests.RequestException, json.JSONDecodeError, KeyError):
             return self._fallback_matrix()

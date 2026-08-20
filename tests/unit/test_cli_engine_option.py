@@ -2,12 +2,12 @@
 # Created: 2026-08-20
 
 import os
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 from click.testing import CliRunner
 
-from tsdbenv.cli import main, CLIState
+from tsdbenv.cli import CLIState, main
 from tsdbenv.engine_config import Engine
 
 
@@ -58,7 +58,9 @@ class TestCLIStateEngineParameter:
     @patch("tsdbenv.cli.VersionManager")
     @patch("tsdbenv.cli.ensure_state_dir")
     @patch("tsdbenv.cli.DockerClient")
-    def test_clistate_accepts_engine_parameter(self, mock_docker, mock_dir, mock_version, mock_tracker):
+    def test_clistate_accepts_engine_parameter(
+        self, mock_docker, mock_dir, mock_version, mock_tracker
+    ):
         """Verify CLIState constructor accepts engine parameter."""
         mock_dir.return_value = "/tmp/test_state"
         mock_docker.return_value = MagicMock()
@@ -70,7 +72,9 @@ class TestCLIStateEngineParameter:
     @patch("tsdbenv.cli.VersionManager")
     @patch("tsdbenv.cli.ensure_state_dir")
     @patch("tsdbenv.cli.DockerClient")
-    def test_clistate_default_engine_is_docker(self, mock_docker, mock_dir, mock_version, mock_tracker):
+    def test_clistate_default_engine_is_docker(
+        self, mock_docker, mock_dir, mock_version, mock_tracker
+    ):
         """Verify CLIState defaults to Docker engine."""
         mock_dir.return_value = "/tmp/test_state"
         mock_docker.return_value = MagicMock()
@@ -82,7 +86,9 @@ class TestCLIStateEngineParameter:
     @patch("tsdbenv.cli.VersionManager")
     @patch("tsdbenv.cli.ensure_state_dir")
     @patch("tsdbenv.cli.DockerClient")
-    def test_clistate_stores_engine_attribute(self, mock_docker, mock_dir, mock_version, mock_tracker):
+    def test_clistate_stores_engine_attribute(
+        self, mock_docker, mock_dir, mock_version, mock_tracker
+    ):
         """Verify CLIState stores engine as attribute."""
         mock_dir.return_value = "/tmp/test_state"
         mock_docker.return_value = MagicMock()
@@ -128,6 +134,7 @@ class TestEngineImports:
     def test_engine_config_imported(self):
         """Verify engine_config module is imported in cli.py."""
         from tsdbenv import cli as cli_module
+
         assert hasattr(cli_module, "Engine")
         assert hasattr(cli_module, "get_engine_from_cli_or_env")
 
@@ -139,7 +146,9 @@ class TestEngineContextPassing:
     @patch("tsdbenv.cli.VersionManager")
     @patch("tsdbenv.cli.ensure_state_dir")
     @patch("tsdbenv.cli.DockerClient")
-    def test_docker_engine_in_context(self, mock_docker, mock_dir, mock_version, mock_tracker):
+    def test_docker_engine_in_context(
+        self, mock_docker, mock_dir, mock_version, mock_tracker
+    ):
         """Verify Docker engine is stored in Click context."""
         mock_dir.return_value = "/tmp/test_state"
         mock_docker.return_value = MagicMock()
@@ -153,7 +162,9 @@ class TestEngineContextPassing:
     @patch("tsdbenv.cli.VersionManager")
     @patch("tsdbenv.cli.ensure_state_dir")
     @patch("tsdbenv.cli.DockerClient")
-    def test_podman_engine_in_context(self, mock_docker, mock_dir, mock_version, mock_tracker):
+    def test_podman_engine_in_context(
+        self, mock_docker, mock_dir, mock_version, mock_tracker
+    ):
         """Verify Podman engine is stored in Click context."""
         mock_dir.return_value = "/tmp/test_state"
         mock_docker.return_value = MagicMock()

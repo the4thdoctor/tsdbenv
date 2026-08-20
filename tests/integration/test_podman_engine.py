@@ -39,7 +39,8 @@ def _is_podman_available() -> bool:
             timeout=5,
         )
         # Then verify socket is reachable by trying to connect
-        from tsdbenv.engine_config import get_socket_path, Engine
+        from tsdbenv.engine_config import Engine, get_socket_path
+
         socket_path = get_socket_path(Engine.PODMAN)
         # Check if socket exists and is accessible
         if not Path(socket_path).exists():
@@ -48,7 +49,12 @@ def _is_podman_available() -> bool:
         client = docker.DockerClient(base_url=f"unix://{socket_path}")
         client.ping()
         return True
-    except (FileNotFoundError, subprocess.TimeoutExpired, subprocess.CalledProcessError, Exception):
+    except (
+        FileNotFoundError,
+        subprocess.TimeoutExpired,
+        subprocess.CalledProcessError,
+        Exception,
+    ):
         return False
 
 
@@ -65,7 +71,7 @@ def cleanup_podman_containers() -> Generator:
 
     Yields a register function to track container IDs for cleanup.
     """
-    from tsdbenv.engine_config import get_socket_path, Engine
+    from tsdbenv.engine_config import Engine, get_socket_path
 
     containers_to_cleanup = []
 

@@ -5,7 +5,8 @@ import os
 
 import pytest
 
-from tsdbenv.engine_config import Engine, EngineConfig, get_engine_from_cli_or_env, get_socket_path
+from tsdbenv.engine_config import (Engine, EngineConfig,
+                                   get_engine_from_cli_or_env, get_socket_path)
 
 
 class TestEngine:

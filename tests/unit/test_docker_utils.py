@@ -8,7 +8,7 @@ import docker.errors
 import pytest
 
 from tsdbenv.docker_utils import DockerClient
-from tsdbenv.engine_config import get_socket_path, Engine
+from tsdbenv.engine_config import Engine, get_socket_path
 
 
 @pytest.fixture
@@ -65,7 +65,9 @@ def test_init_raises_when_docker_not_running():
         fake_client = MagicMock()
         fake_client.ping.side_effect = Exception("connection refused")
         mock_from_env.return_value = fake_client
-        with pytest.raises(RuntimeError, match="Docker is not running or not accessible"):
+        with pytest.raises(
+            RuntimeError, match="Docker is not running or not accessible"
+        ):
             DockerClient()
 
 
@@ -75,7 +77,9 @@ def test_init_raises_when_podman_not_running():
         fake_client = MagicMock()
         fake_client.ping.side_effect = Exception("connection refused")
         mock_docker_client.return_value = fake_client
-        with pytest.raises(RuntimeError, match="Podman is not running or not accessible"):
+        with pytest.raises(
+            RuntimeError, match="Podman is not running or not accessible"
+        ):
             DockerClient(engine="podman")
 
 

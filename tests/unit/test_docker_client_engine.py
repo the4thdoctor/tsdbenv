@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from tsdbenv.docker_utils import DockerClient
-from tsdbenv.engine_config import get_socket_path, Engine
+from tsdbenv.engine_config import Engine, get_socket_path
 
 
 def test_docker_client_default_engine():
@@ -49,9 +49,7 @@ def test_docker_client_explicit_podman_engine():
 
         # Should be called with Podman socket path (dynamic)
         socket_path = get_socket_path(Engine.PODMAN)
-        mock_docker_client.assert_called_once_with(
-            base_url=f"unix://{socket_path}"
-        )
+        mock_docker_client.assert_called_once_with(base_url=f"unix://{socket_path}")
 
 
 def test_docker_client_case_insensitive_engine():
@@ -65,9 +63,7 @@ def test_docker_client_case_insensitive_engine():
 
         # Should be called with Podman socket path (case-insensitive)
         socket_path = get_socket_path(Engine.PODMAN)
-        mock_docker_client.assert_called_once_with(
-            base_url=f"unix://{socket_path}"
-        )
+        mock_docker_client.assert_called_once_with(base_url=f"unix://{socket_path}")
 
 
 def test_docker_client_docker_socket_not_running():
@@ -114,9 +110,7 @@ def test_docker_client_engine_from_env_variable():
 
             # Should use Podman socket when env var is set
             socket_path = get_socket_path(Engine.PODMAN)
-            mock_docker_client.assert_called_once_with(
-                base_url=f"unix://{socket_path}"
-            )
+            mock_docker_client.assert_called_once_with(base_url=f"unix://{socket_path}")
 
 
 def test_docker_client_cli_overrides_env():

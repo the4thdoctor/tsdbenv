@@ -8,7 +8,8 @@ from typing import Dict, List, Optional
 import docker
 import docker.errors
 
-from tsdbenv.engine_config import Engine, get_engine_from_cli_or_env, get_socket_path
+from tsdbenv.engine_config import (Engine, get_engine_from_cli_or_env,
+                                   get_socket_path)
 
 
 class DockerClient:
@@ -248,7 +249,9 @@ class DockerClient:
             time.sleep(1)
         raise TimeoutError(f"PostgreSQL not ready after {timeout}s")
 
-    def create_tablespaces(self, container_id: str, tablespace_names: List[str]) -> Dict[str, bool]:
+    def create_tablespaces(
+        self, container_id: str, tablespace_names: List[str]
+    ) -> Dict[str, bool]:
         """Create tablespaces in container.
 
         Args:
@@ -285,7 +288,9 @@ class DockerClient:
 
         return results
 
-    def execute_sql_file(self, container_id: str, sql_file_path: str, database: str = "tsdb") -> str:
+    def execute_sql_file(
+        self, container_id: str, sql_file_path: str, database: str = "tsdb"
+    ) -> str:
         """Execute SQL file in container via psql.
 
         Args:
@@ -303,8 +308,9 @@ class DockerClient:
         container = self.client.containers.get(container_id)
 
         # Copy SQL file to container
-        import tarfile
         import io
+        import tarfile
+
         tar_stream = io.BytesIO()
         with tarfile.open(fileobj=tar_stream, mode="w") as tar:
             info = tarfile.TarInfo(name="init.sql")
