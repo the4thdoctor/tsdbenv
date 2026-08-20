@@ -14,10 +14,10 @@ from tsdbenv import __version__
 
 # Preprocess argv to expand short aliases before Click parses
 def _expand_short_aliases():
-    """Expand -n, -l, -c, -vr, -m to full command names."""
+    """Expand -n, -l, -c, -g, -m to full command names."""
     if len(sys.argv) > 1:
         # Special cases (before general aliases mapping)
-        if sys.argv[1] == "-vr":
+        if sys.argv[1] == "-g":
             sys.argv[1] = "versionrefresh"
             return
         if sys.argv[1] == "-m":
