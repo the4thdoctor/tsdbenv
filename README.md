@@ -72,8 +72,7 @@ podman machine init
 podman machine start
 
 # Set DOCKER_HOST environment variable (auto-detect socket)
-export DOCKER_HOST="unix://$(podman info --format '{{.Host.RemoteSocket.Path}}' 2>/dev/null || \
-  ls /var/folders/*/T/podman/*api.sock 2>/dev/null | head -1)"
+export DOCKER_HOST="$(podman info --format '{{.Host.RemoteSocket.Path}}')"
 
 # Verify connection
 podman ps
