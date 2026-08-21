@@ -3,17 +3,21 @@
 
 import hashlib
 import sys
+import click
+
 from datetime import datetime
 from pathlib import Path
-
-import click
 from click.formatting import HelpFormatter
 from tabulate import tabulate
-
 from tsdbenv import __version__
 from tsdbenv.engine_config import Engine
-
-
+from tsdbenv.config_handler import ConfigHandler
+from tsdbenv.docker_utils import DockerClient
+from tsdbenv.models import Container
+from tsdbenv.network_validator import NetworkValidator
+from tsdbenv.state_tracker import StateTracker
+from tsdbenv.utils import ensure_state_dir, generate_password
+from tsdbenv.version_manager import VersionManager
 class CustomGroup(click.Group):
     """Custom group to format command help with short flags."""
 
@@ -98,16 +102,6 @@ def _expand_short_aliases():
 
 _expand_short_aliases()
 
-
-from tsdbenv.config_handler import ConfigHandler
-from tsdbenv.docker_utils import DockerClient
-from tsdbenv.models import Container
-from tsdbenv.network_validator import NetworkValidator
-from tsdbenv.state_tracker import StateTracker
-from tsdbenv.utils import ensure_state_dir, generate_password
-from tsdbenv.version_manager import VersionManager
-
-
 def get_dockerfiles_dir() -> Path:
     """Get the path to the dockerfiles directory."""
     return Path(__file__).parent / "dockerfiles"
@@ -169,8 +163,8 @@ def main(ctx, version, engine):
 @click.option("--port", type=int, default=None, help="PostgreSQL port")
 @click.option("--config", type=click.Path(exists=True), help="PostgreSQL config file")
 @click.option("--bind-ip", help="IP to bind to (default: 127.0.0.1)")
-@click.option("-i,", "--init", type=click.Path(exists=True), help="SQL file to execute")
-@click.option("-t,", "--tablespaces", help="Comma-separated tablespace names")
+@click.option("-i", "--init", type=click.Path(exists=True), help="SQL file to execute")
+@click.option("-t", "--tablespaces", help="Comma-separated tablespace names")
 @click.option("--force", is_flag=True, help="Skip version compatibility check")
 def new(postgres, timescaledb, port, config, bind_ip, init, tablespaces, force):
     """Create PostgreSQL + TimescaleDB container"""
