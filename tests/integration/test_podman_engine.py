@@ -27,9 +27,14 @@ from tsdbenv.docker_utils import DockerClient
 def _is_podman_available() -> bool:
     """Check if Podman is available and socket is reachable.
 
+    Supports both standard Linux sockets and macOS Podman machine setup.
+    On macOS, falls back to DOCKER_HOST environment variable.
+
     Returns:
         True if podman CLI is installed and socket is accessible, False otherwise.
     """
+    import os
+
     try:
         # First check if podman CLI is available
         subprocess.run(
@@ -42,13 +47,21 @@ def _is_podman_available() -> bool:
         from tsdbenv.engine_config import Engine, get_socket_path
 
         socket_path = get_socket_path(Engine.PODMAN)
-        # Check if socket exists and is accessible
-        if not Path(socket_path).exists():
-            return False
-        # Try to actually connect to verify it's responsive
-        client = docker.DockerClient(base_url=f"unix://{socket_path}")
-        client.ping()
-        return True
+
+        # Try standard socket path first
+        if Path(socket_path).exists():
+            client = docker.DockerClient(base_url=f"unix://{socket_path}")
+            client.ping()
+            return True
+
+        # On macOS with Podman machine, try DOCKER_HOST
+        docker_host = os.environ.get("DOCKER_HOST")
+        if docker_host:
+            client = docker.DockerClient(base_url=docker_host)
+            client.ping()
+            return True
+
+        return False
     except (
         FileNotFoundError,
         subprocess.TimeoutExpired,

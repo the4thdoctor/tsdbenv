@@ -5,6 +5,7 @@ import hashlib
 import sys
 import click
 
+
 from datetime import datetime
 from pathlib import Path
 from click.formatting import HelpFormatter
@@ -18,6 +19,7 @@ from tsdbenv.network_validator import NetworkValidator
 from tsdbenv.state_tracker import StateTracker
 from tsdbenv.utils import ensure_state_dir, generate_password
 from tsdbenv.version_manager import VersionManager
+
 class CustomGroup(click.Group):
     """Custom group to format command help with short flags."""
 

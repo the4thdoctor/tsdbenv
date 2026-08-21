@@ -52,15 +52,27 @@ class DockerClient:
         self._engine = engine_obj
 
         # Initialize client: Docker via docker.from_env() (honors DOCKER_HOST),
-        # Podman via explicit socket path
+        # Podman via explicit socket path or DOCKER_HOST fallback
         try:
             if engine_obj == Engine.DOCKER:
                 # Use docker.from_env() to honor DOCKER_HOST, Docker contexts, rootless Docker, Colima, etc.
                 self.client = docker.from_env()
             else:
-                # Podman: use engine-specific socket path
+                # Podman: try standard socket path first, then DOCKER_HOST (for macOS Podman machine)
+                import os
+                from pathlib import Path
+
                 socket_path = get_socket_path(engine_obj)
-                self.client = docker.DockerClient(base_url=f"unix://{socket_path}")
+                if Path(socket_path).exists():
+                    self.client = docker.DockerClient(base_url=f"unix://{socket_path}")
+                else:
+                    # Fallback to DOCKER_HOST (macOS with Podman machine)
+                    docker_host = os.environ.get("DOCKER_HOST")
+                    if docker_host:
+                        self.client = docker.DockerClient(base_url=docker_host)
+                    else:
+                        # No socket and no DOCKER_HOST, try anyway
+                        self.client = docker.DockerClient(base_url=f"unix://{socket_path}")
         except Exception as e:
             engine_name = engine_obj.value.capitalize()
             raise RuntimeError(
