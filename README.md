@@ -320,6 +320,34 @@ SELECT create_hypertable('metrics_fast', 'time');
 
 ## Examples
 
+### Quick Examples
+
+```bash
+# Create container
+$ tsdbenv -n --postgres 16 --timescaledb 2.29.2
+
+# Create with init SQL and tablespaces
+$ tsdbenv -n --postgres 16 --timescaledb 2.29.2 -t fast,archive -i schema.sql
+
+# List existing containers
+$ tsdbenv -l
+
+# Get connection string
+$ tsdbenv -c <container_name>
+
+# Create tablespaces on container
+$ tsdbenv -t <container_name> --tablespaces fast,archive
+
+# Use Podman instead of Docker
+$ tsdbenv -n --postgres 16 --engine podman
+
+# Refresh version cache
+$ tsdbenv -g
+
+# Show the current compatibility matrix
+$ tsdbenv -m
+```
+
 ### Create and connect to a container
 
 ```bash
