@@ -7,10 +7,47 @@ from datetime import datetime
 from pathlib import Path
 
 import click
+from click.formatting import HelpFormatter
 from tabulate import tabulate
 
 from tsdbenv import __version__
 from tsdbenv.engine_config import Engine
+
+
+class CustomGroup(click.Group):
+    """Custom group to format command help with short flags."""
+
+    def format_commands(self, ctx, formatter):
+        """Writes all the commands to the formatter."""
+        commands = []
+        for subcommand in self.list_commands(ctx):
+            cmd = self.get_command(ctx, subcommand)
+            if cmd is None:
+                continue
+
+            short_flags = {
+                "new": "-n",
+                "list": "-l",
+                "logs": None,
+                "remove": "-r",
+                "removeall": "-a",
+                "connectstring": "-c",
+                "tablespaces": "-t",
+                "versionrefresh": "-g",
+                "matrix": "-m",
+            }
+
+            help_text = cmd.get_short_help_str(100)
+            flag = short_flags.get(subcommand)
+
+            if flag:
+                help_text = f"{flag}, {help_text}"
+
+            commands.append((subcommand, help_text))
+
+        if commands:
+            with formatter.section("Commands"):
+                formatter.write_dl(commands)
 
 
 def _expand_short_aliases():
@@ -106,7 +143,7 @@ def init_cli_state(engine: Engine) -> None:
         raise click.Abort()
 
 
-@click.group(context_settings={"help_option_names": ["-h", "--help"]}, invoke_without_command=True)
+@click.command(cls=CustomGroup, context_settings={"help_option_names": ["-h", "--help"]}, invoke_without_command=True)
 @click.option("-v", "--version", is_flag=True, help="Show version and exit")
 @click.option(
     "-e",
@@ -117,34 +154,7 @@ def init_cli_state(engine: Engine) -> None:
 )
 @click.pass_context
 def main(ctx, version, engine):
-    """tsdbenv - PostgreSQL + TimescaleDB environment manager.
-
-Examples:
-
-    # Create container:
-    $ tsdbenv -n --postgres 16 --timescaledb 2.29.2
-
-    # Create with init SQL and tablespaces:
-    $ tsdbenv -n --postgres 16 --timescaledb 2.29.2 -t fast,archive -i schema.sql
-
-    # List existing containers:
-    $ tsdbenv -l
-
-    # Get connection string:
-    $ tsdbenv -c <container_name>
-
-    # Create tablespaces on container:
-    $ tsdbenv -t <container_name> --tablespaces fast,archive
-
-    # Use Podman instead of Docker:
-    $ tsdbenv -n --postgres 16 --engine podman
-
-    # Refresh version cache:
-    $ tsdbenv -g
-
-    # Show the current compatibility matrix:
-    $ tsdbenv -m
-    """
+    """tsdbenv - PostgreSQL + TimescaleDB environment manager."""
     if version:
         click.echo(f"tsdbenv {__version__}")
         ctx.exit(0)
@@ -159,11 +169,11 @@ Examples:
 @click.option("--port", type=int, default=None, help="PostgreSQL port")
 @click.option("--config", type=click.Path(exists=True), help="PostgreSQL config file")
 @click.option("--bind-ip", help="IP to bind to (default: 127.0.0.1)")
-@click.option("--init", "-i", type=click.Path(exists=True), help="SQL file to execute")
-@click.option("--tablespaces", "-t", help="Comma-separated tablespace names")
+@click.option("-i,", "--init", type=click.Path(exists=True), help="SQL file to execute")
+@click.option("-t,", "--tablespaces", help="Comma-separated tablespace names")
 @click.option("--force", is_flag=True, help="Skip version compatibility check")
 def new(postgres, timescaledb, port, config, bind_ip, init, tablespaces, force):
-    """Create PostgreSQL + TimescaleDB container (-n)"""
+    """Create PostgreSQL + TimescaleDB container"""
     click.echo("[REFRESH] Checking for latest TimescaleDB versions...")
     cli_state.version_manager.refresh()
 
@@ -270,7 +280,7 @@ def new(postgres, timescaledb, port, config, bind_ip, init, tablespaces, force):
 
 @main.command("list")
 def list_cmd():
-    """List all containers (-l)"""
+    """List all containers"""
     containers = cli_state.state_tracker.load_containers()
     if not containers:
         click.echo("No containers found.")
@@ -318,7 +328,7 @@ def logs(container_name):
 @main.command()
 @click.argument("container_name", required=False)
 def remove(container_name):
-    """Remove a container (-r)"""
+    """Remove a container"""
     if not container_name:
         containers = cli_state.state_tracker.load_containers()
         if not containers:
@@ -345,7 +355,7 @@ def remove(container_name):
 @main.command("removeall")
 @click.option("--force", is_flag=True, help="Skip confirmation prompt")
 def removeall(force):
-    """Remove all containers (-a)"""
+    """Remove all containers"""
     containers = cli_state.state_tracker.load_containers()
     if not containers:
         click.echo("No containers found.")
@@ -378,7 +388,7 @@ def removeall(force):
 @main.command()
 @click.argument("container_name", required=False)
 def connectstring(container_name):
-    """Get psql command for container (-c)"""
+    """Get psql command for container"""
     if not container_name:
         containers = cli_state.state_tracker.load_containers()
         if not containers:
@@ -405,7 +415,7 @@ def connectstring(container_name):
 @click.argument("container_name", required=False)
 @click.option("--names", help="Comma-separated tablespace names")
 def create_tablespaces(container_name, names):
-    """Create database tablespaces (-t)"""
+    """Create database tablespaces"""
     if not container_name:
         containers = cli_state.state_tracker.load_containers()
         if not containers:
@@ -443,7 +453,7 @@ def create_tablespaces(container_name, names):
 
 @main.command("versionrefresh")
 def versionrefresh():
-    """Refresh version matrix (-g)"""
+    """Refresh version matrix"""
     click.echo("[REFRESH] Fetching latest TimescaleDB versions...")
     matrix = cli_state.version_manager.refresh()
     versions_found = sum(len(v) for v in matrix.postgres_versions.values())
@@ -453,7 +463,7 @@ def versionrefresh():
 
 @main.command("matrix")
 def show_matrix():
-    """Display compatibility matrix (-m)"""
+    """Display compatibility matrix"""
     cached = cli_state.version_manager.load_from_cache()
     if cached and cli_state.version_manager._is_cache_stale(cached):
         click.echo("[REFRESH] Version cache is outdated, fetching latest...")
