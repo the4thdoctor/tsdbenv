@@ -127,7 +127,7 @@ Examples:
 
     # Create with init SQL and tablespaces:
 
-    tsdbenv -n --postgres 16 --timescaledb 2.29.2 -t fast,archive --init schema.sql
+    tsdbenv -n --postgres 16 --timescaledb 2.29.2 -t fast,archive -i schema.sql
 
     # List existing containers:
 
@@ -167,7 +167,7 @@ Examples:
 @click.option("--port", type=int, default=None, help="PostgreSQL port")
 @click.option("--config", type=click.Path(exists=True), help="PostgreSQL config file")
 @click.option("--bind-ip", help="IP to bind to (default: 127.0.0.1)")
-@click.option("--init", type=click.Path(exists=True), help="SQL file to execute")
+@click.option("--init", "-i", type=click.Path(exists=True), help="SQL file to execute")
 @click.option("--tablespaces", "-t", help="Comma-separated tablespace names")
 @click.option("--force", is_flag=True, help="Skip version compatibility check")
 def new(postgres, timescaledb, port, config, bind_ip, init, tablespaces, force):
