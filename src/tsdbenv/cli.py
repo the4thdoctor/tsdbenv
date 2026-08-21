@@ -122,36 +122,28 @@ def main(ctx, version, engine):
 Examples:
 
     # Create container:
-
-    tsdbenv -n --postgres 16 --timescaledb 2.29.2
+    $ tsdbenv -n --postgres 16 --timescaledb 2.29.2
 
     # Create with init SQL and tablespaces:
-
-    tsdbenv -n --postgres 16 --timescaledb 2.29.2 -t fast,archive -i schema.sql
+    $ tsdbenv -n --postgres 16 --timescaledb 2.29.2 -t fast,archive -i schema.sql
 
     # List existing containers:
-
-    tsdbenv -l
-
-    # Show the current compatibility matrix:
-
-    tsdbenv -m
+    $ tsdbenv -l
 
     # Get connection string:
-
-    tsdbenv -c mycontainer
+    $ tsdbenv -c <container_name>
 
     # Create tablespaces on container:
-
-    tsdbenv -t mycontainer --tablespaces fast,archive
+    $ tsdbenv -t <container_name> -t fast,archive
 
     # Use Podman instead of Docker:
-
-    tsdbenv -n --postgres 16 --engine podman
+    $ tsdbenv -n --postgres 16 --engine podman
 
     # Refresh version cache:
+    $ tsdbenv -g
 
-    tsdbenv -g
+    # Show the current compatibility matrix:
+    $ tsdbenv -m
     """
     if version:
         click.echo(f"tsdbenv {__version__}")
@@ -411,8 +403,8 @@ def connectstring(container_name):
 
 @main.command("tablespaces")
 @click.argument("container_name", required=False)
-@click.option("--tablespaces", help="Comma-separated tablespace names")
-def create_tablespaces(container_name, tablespaces):
+@click.option("--names", help="Comma-separated tablespace names")
+def create_tablespaces(container_name, names):
     """Create database tablespaces (-t)"""
     if not container_name:
         containers = cli_state.state_tracker.load_containers()
@@ -431,11 +423,11 @@ def create_tablespaces(container_name, tablespaces):
         click.echo(f"Container '{container_name}' not found.")
         return
 
-    if not tablespaces:
-        tablespaces = click.prompt("Tablespace names (comma-separated)")
+    if not names:
+        names = click.prompt("Tablespace names (comma-separated)")
 
     try:
-        ts_list = [ts.strip() for ts in tablespaces.split(",")]
+        ts_list = [ts.strip() for ts in names.split(",")]
         click.echo(f"[ACTION] Creating {len(ts_list)} tablespace(s)...")
         results = cli_state.docker_client.create_tablespaces(container.docker_id, ts_list)
         successful = sum(1 for v in results.values() if v)
