@@ -20,6 +20,12 @@ from tsdbenv.state_tracker import StateTracker
 from tsdbenv.utils import ensure_state_dir, generate_password
 from tsdbenv.version_manager import VersionManager
 
+
+def log(message: str) -> None:
+    """Log message with ISO 8601 timestamp."""
+    ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    click.echo(f"{ts} {message}")
+
 class CustomGroup(click.Group):
     """Custom group to format command help with short flags."""
 
@@ -170,7 +176,7 @@ def main(ctx, version, engine):
 @click.option("--force", is_flag=True, help="Skip version compatibility check")
 def new(postgres, timescaledb, port, config, bind_ip, init, tablespaces, force):
     """Create PostgreSQL + TimescaleDB container"""
-    click.echo("[REFRESH] Checking for latest TimescaleDB versions...")
+    log("Checking for latest TimescaleDB versions...")
     cli_state.version_manager.refresh()
 
     if not postgres:
@@ -180,11 +186,11 @@ def new(postgres, timescaledb, port, config, bind_ip, init, tablespaces, force):
 
     if not force and not cli_state.version_manager.is_compatible(postgres, timescaledb):
         compatible_versions = cli_state.version_manager.get_compatible_timescaledb_versions(postgres)
-        click.echo(f"[ERROR] TSDB {timescaledb} is not compatible with PostgreSQL {postgres}")
+        click.echo(f"ERROR TSDB {timescaledb} is not compatible with PostgreSQL {postgres}")
         if compatible_versions:
             versions_str = ", ".join(compatible_versions)
-            click.echo(f"   [INFO]  Compatible TSDB versions: {versions_str}")
-        click.echo("   [WARNING]  Use --force to override")
+            click.echo(f"   Compatible TSDB versions: {versions_str}")
+        click.echo("   Use --force to override")
         raise click.Abort()
 
     timestamp_hash = hashlib.md5(str(datetime.now()).encode()).hexdigest()[:8]
@@ -194,7 +200,7 @@ def new(postgres, timescaledb, port, config, bind_ip, init, tablespaces, force):
         try:
             ConfigHandler.parse_file(Path(config))
         except Exception as e:
-            click.echo(f"[ERROR] Failed to parse config: {e}")
+            click.echo(f"ERROR Failed to parse config: {e}")
             return
 
     if not bind_ip:
@@ -220,7 +226,7 @@ def new(postgres, timescaledb, port, config, bind_ip, init, tablespaces, force):
             build_args={"PG_VERSION": postgres},
         )
     except Exception as e:
-        click.echo(f"[ERROR] Failed to build Docker image: {e}")
+        click.echo(f"ERROR Failed to build Docker image: {e}")
         raise click.Abort()
 
     container_id = cli_state.docker_client.create_container(
@@ -249,27 +255,27 @@ def new(postgres, timescaledb, port, config, bind_ip, init, tablespaces, force):
 
     if init:
         try:
-            click.echo("[INFO] Waiting for PostgreSQL to be fully ready...")
+            log("Waiting for PostgreSQL to be fully ready...")
             cli_state.docker_client.wait_for_postgres(container_id, timeout=60)
-            click.echo("[INFO] Executing init SQL file...")
+            log("Executing init SQL file...")
             cli_state.docker_client.execute_sql_file(container_id, init)
-            click.echo("[OK] Init SQL executed successfully")
+            log("Init SQL executed successfully")
         except Exception as e:
-            click.echo(f"[WARNING]  Init SQL execution failed: {e}")
+            click.echo(f"WARNING Init SQL execution failed: {e}")
             click.echo("   Container created but schema setup incomplete")
 
     if tablespaces:
         try:
             ts_list = [ts.strip() for ts in tablespaces.split(",")]
-            click.echo(f"[ACTION] Creating {len(ts_list)} tablespace(s)...")
+            log(f"Creating {len(ts_list)} tablespace(s)...")
             results = cli_state.docker_client.create_tablespaces(container_id, ts_list)
             successful = sum(1 for v in results.values() if v)
-            click.echo(f"[OK] Created {successful}/{len(ts_list)} tablespace(s)")
+            log(f"Created {successful}/{len(ts_list)} tablespace(s)")
             if successful < len(ts_list):
                 failed = [k for k, v in results.items() if not v]
-                click.echo(f"   [WARNING]  Failed: {', '.join(failed)}")
+                click.echo(f"   WARNING Failed: {', '.join(failed)}")
         except Exception as e:
-            click.echo(f"[WARNING]  Tablespace creation failed: {e}")
+            click.echo(f"WARNING Tablespace creation failed: {e}")
             click.echo("   Container created but tablespaces incomplete")
 
     display_connection_info(container)
@@ -493,7 +499,7 @@ def display_connection_info(container: Container) -> None:
     connection_string = f"postgresql://tsdbadmin:{container.tsdbadmin_password}@{container.bind_ip}:{container.port}/tsdb"
     click.echo(
         f"""
-[OK] Container '{container.name}' created successfully!
+Container '{container.name}' created successfully!
 
 Connect:
   psql "{connection_string}"
