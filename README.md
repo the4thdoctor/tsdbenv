@@ -105,6 +105,7 @@ tsdbenv new --postgres 14 --timescaledb 2.10.0 --bind-ip 127.0.0.1
 - `--init PATH` — SQL file to execute after container creation
 - `--tablespaces NAMES` — Comma-separated tablespace names to create
 - `--force` — Skip version compatibility check
+- `--verbose` — Enable detailed logging with timestamps
 
 **Features:**
 - Auto-generates unique container names (`tsdb-{timestamp_hash}`)
@@ -219,6 +220,39 @@ tsdbenv -n --postgres 16 \
   --timescaledb 2.29.2 \
   -t "fast,archive" \
   --init schema.sql
+```
+
+## Logging and Verbosity
+
+By default, tsdbenv shows a clean output with animated spinners for long-running operations. Use `--verbose` for detailed operation logs:
+
+```bash
+# Default: clean output with spinner animation
+tsdbenv new --postgres 16 --timescaledb 2.29.2 -i schema.sql
+
+⠙ Checking for latest TimescaleDB versions...
+⠴ Waiting for PostgreSQL to be fully ready...
+⠦ Executing init SQL file...
+
+Container 'tsdb-2af14423' created successfully!
+```
+
+```bash
+# Verbose: detailed timestamped logs
+tsdbenv new --postgres 16 --timescaledb 2.29.2 -i schema.sql --verbose
+
+2026-08-21 01:31:18 Checking for latest TimescaleDB versions...
+2026-08-21 01:31:21 Waiting for PostgreSQL to be fully ready...
+2026-08-21 01:31:21 Executing init SQL file...
+2026-08-21 01:31:21 Init SQL executed successfully
+
+Container 'tsdb-2af14423' created successfully!
+```
+
+Works with any subcommand:
+```bash
+tsdbenv --verbose new --postgres 16 --timescaledb 2.29.2
+tsdbenv new --postgres 16 --timescaledb 2.29.2 --verbose  # Both syntaxes work
 ```
 
 ## Connection
