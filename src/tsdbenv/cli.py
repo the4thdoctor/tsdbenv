@@ -4,6 +4,8 @@
 import hashlib
 import sys
 import click
+import time
+import threading
 
 
 from datetime import datetime
@@ -21,11 +23,65 @@ from tsdbenv.utils import ensure_state_dir, generate_password
 from tsdbenv.version_manager import VersionManager
 
 
+class Spinner:
+    """Simple terminal spinner for non-verbose mode."""
+
+    def __init__(self, message: str):
+        self.message = message
+        self.spinner_chars = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
+        self.current = 0
+        self.running = False
+        self.thread = None
+
+    def __enter__(self):
+        self.start()
+        return self
+
+    def __exit__(self, *args):
+        self.stop()
+
+    def start(self):
+        self.running = True
+        self.thread = threading.Thread(target=self._spin, daemon=True)
+        self.thread.start()
+
+    def stop(self):
+        self.running = False
+        if self.thread:
+            self.thread.join(timeout=1)
+        # Clear the spinner line
+        click.echo("\r" + " " * (len(self.message) + 2), nl=False)
+        click.echo("\r", nl=False)
+
+    def _spin(self):
+        while self.running:
+            char = self.spinner_chars[self.current % len(self.spinner_chars)]
+            click.echo(f"\r{char} {self.message}", nl=False)
+            sys.stdout.flush()
+            self.current += 1
+            time.sleep(0.1)
+
+
 def log(message: str) -> None:
     """Log message with ISO 8601 timestamp (only if verbose mode enabled)."""
     if cli_state.verbose:
         ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         click.echo(f"{ts} {message}")
+
+
+def spinner(message: str):
+    """Context manager for spinner in non-verbose mode."""
+    if cli_state.verbose:
+        return _NoOpContext()
+    return Spinner(message)
+
+
+class _NoOpContext:
+    """Context manager that does nothing."""
+    def __enter__(self):
+        return self
+    def __exit__(self, *args):
+        pass
 
 class CustomGroup(click.Group):
     """Custom group to format command help with short flags."""
@@ -179,8 +235,9 @@ def main(ctx, version, engine, verbose):
 @click.option("--force", is_flag=True, help="Skip version compatibility check")
 def new(postgres, timescaledb, port, config, bind_ip, init, tablespaces, force):
     """Create PostgreSQL + TimescaleDB container"""
-    log("Checking for latest TimescaleDB versions...")
-    cli_state.version_manager.refresh()
+    with spinner("Checking for latest TimescaleDB versions..."):
+        log("Checking for latest TimescaleDB versions...")
+        cli_state.version_manager.refresh()
 
     if not postgres:
         postgres = click.prompt("PostgreSQL version", type=str)
@@ -258,10 +315,12 @@ def new(postgres, timescaledb, port, config, bind_ip, init, tablespaces, force):
 
     if init:
         try:
-            log("Waiting for PostgreSQL to be fully ready...")
-            cli_state.docker_client.wait_for_postgres(container_id, timeout=60)
-            log("Executing init SQL file...")
-            cli_state.docker_client.execute_sql_file(container_id, init)
+            with spinner("Waiting for PostgreSQL to be fully ready..."):
+                log("Waiting for PostgreSQL to be fully ready...")
+                cli_state.docker_client.wait_for_postgres(container_id, timeout=60)
+            with spinner("Executing init SQL file..."):
+                log("Executing init SQL file...")
+                cli_state.docker_client.execute_sql_file(container_id, init)
             log("Init SQL executed successfully")
         except Exception as e:
             click.echo(f"WARNING Init SQL execution failed: {e}")
@@ -270,8 +329,9 @@ def new(postgres, timescaledb, port, config, bind_ip, init, tablespaces, force):
     if tablespaces:
         try:
             ts_list = [ts.strip() for ts in tablespaces.split(",")]
-            log(f"Creating {len(ts_list)} tablespace(s)...")
-            results = cli_state.docker_client.create_tablespaces(container_id, ts_list)
+            with spinner(f"Creating {len(ts_list)} tablespace(s)..."):
+                log(f"Creating {len(ts_list)} tablespace(s)...")
+                results = cli_state.docker_client.create_tablespaces(container_id, ts_list)
             successful = sum(1 for v in results.values() if v)
             log(f"Created {successful}/{len(ts_list)} tablespace(s)")
             if successful < len(ts_list):
