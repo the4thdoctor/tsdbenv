@@ -233,8 +233,11 @@ def main(ctx, version, engine, verbose):
 @click.option("-i", "--init", type=click.Path(exists=True), help="SQL file to execute")
 @click.option("-t", "--tablespaces", help="Comma-separated tablespace names")
 @click.option("--force", is_flag=True, help="Skip version compatibility check")
-def new(postgres, timescaledb, port, config, bind_ip, init, tablespaces, force):
+@click.option("--verbose", is_flag=True, help="Enable verbose logging")
+def new(postgres, timescaledb, port, config, bind_ip, init, tablespaces, force, verbose):
     """Create PostgreSQL + TimescaleDB container"""
+    if verbose:
+        cli_state.verbose = True
     with spinner("Checking for latest TimescaleDB versions..."):
         log("Checking for latest TimescaleDB versions...")
         cli_state.version_manager.refresh()
