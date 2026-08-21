@@ -330,6 +330,9 @@ class DockerClient:
         tar_stream.seek(0)
         container.put_archive("/tmp", tar_stream)
 
+        # Give PostgreSQL a moment to fully initialize socket after "ready" message
+        time.sleep(1)
+
         # Execute SQL file (use postgres user, guaranteed to exist at this point)
         result = container.exec_run(
             f"psql -U postgres -d {database} -f /tmp/init.sql",
