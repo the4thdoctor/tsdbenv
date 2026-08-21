@@ -10,7 +10,7 @@ import click
 from tabulate import tabulate
 
 from tsdbenv import __version__
-from tsdbenv.engine_config import Engine, get_engine_from_cli_or_env
+from tsdbenv.engine_config import Engine
 
 
 def _expand_short_aliases():
@@ -134,7 +134,7 @@ Examples:
     $ tsdbenv -c <container_name>
 
     # Create tablespaces on container:
-    $ tsdbenv -t <container_name> -t fast,archive
+    $ tsdbenv -t <container_name> --tablespaces fast,archive
 
     # Use Podman instead of Docker:
     $ tsdbenv -n --postgres 16 --engine podman
