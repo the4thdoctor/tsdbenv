@@ -122,10 +122,10 @@ tsdbenv list
 
 Output:
 ```
-Name            PG    TSDB       IP              Port  
----------------------------------------------------------
-tsdb-04d30960   14    2.10.0     127.0.0.1       5433  
-tsdb-abcd1234   15    2.11.0     127.0.0.1       5434  
+Name            PG    TSDB       IP              Port   Engine  
+-----------------------------------------------------------------
+tsdb-04d30960   14    2.10.0     127.0.0.1       5433   docker  
+tsdb-abcd1234   15    2.11.0     127.0.0.1       5434   podman  
 ```
 
 ### logs
@@ -383,10 +383,10 @@ SELECT create_hypertable('metrics', 'time');
 tsdbenv list
 
 # Output:
-# Name            PG    TSDB       IP              Port  
-# ---------------------------------------------------------
-# tsdb-04d30960   14    2.10.0     127.0.0.1       5433
-# tsdb-b1a6b5e5   15    2.10.0     127.0.0.1       5435
+# Name            PG    TSDB       IP              Port   Engine  
+# -----------------------------------------------------------------
+# tsdb-04d30960   14    2.10.0     127.0.0.1       5433   docker  
+# tsdb-b1a6b5e5   15    2.10.0     127.0.0.1       5435   podman  
 ```
 
 ### View container logs

@@ -243,6 +243,7 @@ def new(postgres, timescaledb, port, config, bind_ip, init, tablespaces, force):
         port=port,
         bind_ip=bind_ip,
         tsdbadmin_password=tsdbadmin_password,
+        engine=cli_state.engine.value,
     )
     cli_state.state_tracker.save_container(container)
 
@@ -287,11 +288,11 @@ def list_cmd():
         if click.confirm(f"Container '{s.name}' unused for 5+ days. Remove?"):
             cli_state.state_tracker.delete_container(s.name)
 
-    click.echo(f"\n{'Name':<15} {'PG':<5} {'TSDB':<10} {'IP':<15} {'Port':<6}")
-    click.echo("-" * 57)
+    click.echo(f"\n{'Name':<15} {'PG':<5} {'TSDB':<10} {'IP':<15} {'Port':<6} {'Engine':<8}")
+    click.echo("-" * 65)
     for c in containers:
         click.echo(
-            f"{c.name:<15} {c.postgres_version:<5} {c.timescaledb_version:<10} {c.bind_ip:<15} {c.port:<6}"
+            f"{c.name:<15} {c.postgres_version:<5} {c.timescaledb_version:<10} {c.bind_ip:<15} {c.port:<6} {c.engine:<8}"
         )
 
 
