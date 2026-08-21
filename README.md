@@ -11,14 +11,12 @@ PostgreSQL + TimescaleDB environment manager via container. Spin up isolated loc
 
 ## Overview
 
-**tsdbenv** simplifies local PostgreSQL + TimescaleDB development by automating container setup. Provide versions → validate compatibility → build and run isolated Docker containers with persistent state, automatic port assignment, and easy access to logs. Includes all Tiger Cloud extensions (TimescaleDB, pgvector, postgres_fdw, and more).
+**tsdbenv** simplifies local PostgreSQL + TimescaleDB development by automating container setup. Provide versions, validate compatibility, build and run isolated Docker containers with persistent state, automatic port assignment, and easy access to logs. Includes all Tiger Cloud extensions (TimescaleDB, pgvector, postgres_fdw, and more).
 
 ## Requirements
 
 - **Docker** (installed and running) or **Podman** (rootless mode)
 - **Python 3.8+**
-- **PostgreSQL 18+** (containers, not host)
-- **TimescaleDB 2.29.0+** (containers, not host)
 - **Git** (for installer script)
 
 ## Installation
@@ -29,18 +27,7 @@ PostgreSQL + TimescaleDB environment manager via container. Spin up isolated loc
 curl https://raw.githubusercontent.com/wagnerbianchijr/tsdbenv/main/install.sh | bash
 ```
 
-### Manual Install
-
-```bash
-git clone https://github.com/wagnerbianchijr/tsdbenv.git
-cd tsdbenv
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-pip install -e .
-```
-
-For detailed installation options including Homebrew, see [INSTALL.md](INSTALL.md).
+*Homebrew*, see [INSTALL.md](INSTALL.md).
 
 ## Quick Start
 
@@ -84,14 +71,21 @@ tsdbenv -n --postgres 15 --timescaledb 2.10.0
 podman machine init
 podman machine start
 
-# Set DOCKER_HOST environment variable (macOS only)
-export DOCKER_HOST="unix://$HOME/.local/share/containers/podman/podman.sock"
+# Set DOCKER_HOST environment variable (auto-detect socket)
+export DOCKER_HOST="unix://$(podman info --format '{{.Host.RemoteSocket.Path}}' 2>/dev/null || \
+  ls /var/folders/*/T/podman/*api.sock 2>/dev/null | head -1)"
 
-# Or use the temporary socket location
-export DOCKER_HOST="unix:///var/folders/xx/xxx/T/podman/podman-machine-default-api.sock"
+# Verify connection
+podman ps
 
-# Now you can use Podman
-tsdbenv -e podman --postgres 15 --timescaledb 2.29.2
+# Now you can use Podman with tsdbenv
+tsdbenv -n --engine podman --postgres 15 --timescaledb 2.29.2
+```
+
+**Persistent Setup** (add to `~/.zshrc` or `~/.bashrc`):
+```bash
+export DOCKER_HOST="unix://$(podman info --format '{{.Host.RemoteSocket.Path}}' 2>/dev/null || \
+  ls /var/folders/*/T/podman/*api.sock 2>/dev/null | head -1)"
 ```
 
 ## Commands
