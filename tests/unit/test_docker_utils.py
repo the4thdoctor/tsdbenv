@@ -44,7 +44,10 @@ def test_init_with_docker_engine(mock_docker_client):
 
 def test_init_with_podman_engine(mock_docker_client):
     """DockerClient initializes with explicit podman engine."""
-    with patch("tsdbenv.docker_utils.docker.DockerClient") as mock_docker_client_ctor:
+    import os
+    with patch("tsdbenv.docker_utils.docker.DockerClient") as mock_docker_client_ctor, \
+         patch("tsdbenv.docker_utils.Path.exists", return_value=False), \
+         patch.dict(os.environ, {"DOCKER_HOST": ""}, clear=False):
         fake_client = MagicMock()
         fake_client.ping.return_value = True
         mock_docker_client_ctor.return_value = fake_client

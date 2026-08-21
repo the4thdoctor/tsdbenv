@@ -39,22 +39,26 @@ def test_docker_client_explicit_docker_engine():
 
 
 def test_docker_client_explicit_podman_engine():
-    """Test DockerClient(engine='podman') uses Podman socket."""
-    with patch("tsdbenv.docker_utils.docker.DockerClient") as mock_docker_client:
+    """Test DockerClient(engine='podman') uses Podman socket or DOCKER_HOST fallback."""
+    with patch("tsdbenv.docker_utils.docker.DockerClient") as mock_docker_client, \
+         patch("tsdbenv.docker_utils.Path.exists", return_value=False), \
+         patch.dict(os.environ, {"DOCKER_HOST": ""}, clear=False):
         fake_client = MagicMock()
         fake_client.ping.return_value = True
         mock_docker_client.return_value = fake_client
 
         DockerClient(engine="podman")
 
-        # Should be called with Podman socket path (dynamic)
+        # Should be called with Podman socket path (when socket doesn't exist and no DOCKER_HOST)
         socket_path = get_socket_path(Engine.PODMAN)
         mock_docker_client.assert_called_once_with(base_url=f"unix://{socket_path}")
 
 
 def test_docker_client_case_insensitive_engine():
     """Test DockerClient engine parameter is case-insensitive."""
-    with patch("tsdbenv.docker_utils.docker.DockerClient") as mock_docker_client:
+    with patch("tsdbenv.docker_utils.docker.DockerClient") as mock_docker_client, \
+         patch("tsdbenv.docker_utils.Path.exists", return_value=False), \
+         patch.dict(os.environ, {"DOCKER_HOST": ""}, clear=False):
         fake_client = MagicMock()
         fake_client.ping.return_value = True
         mock_docker_client.return_value = fake_client
@@ -100,12 +104,13 @@ def test_docker_client_invalid_engine():
 
 def test_docker_client_engine_from_env_variable():
     """Test DockerClient respects TSDBENV_ENGINE environment variable."""
-    with patch("tsdbenv.docker_utils.docker.DockerClient") as mock_docker_client:
+    with patch("tsdbenv.docker_utils.docker.DockerClient") as mock_docker_client, \
+         patch("tsdbenv.docker_utils.Path.exists", return_value=False):
         fake_client = MagicMock()
         fake_client.ping.return_value = True
         mock_docker_client.return_value = fake_client
 
-        with patch.dict("os.environ", {"TSDBENV_ENGINE": "podman"}):
+        with patch.dict("os.environ", {"TSDBENV_ENGINE": "podman", "DOCKER_HOST": ""}):
             DockerClient()
 
             # Should use Podman socket when env var is set
