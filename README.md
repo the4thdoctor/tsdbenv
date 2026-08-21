@@ -75,7 +75,24 @@ export TSDBENV_ENGINE=podman
 tsdbenv -n --postgres 15 --timescaledb 2.10.0
 ```
 
-**Requirements**: Podman must be installed and configured in rootless mode. Rootless Podman uses slirp4netns for port binding, which may add slight latency compared to Docker's host bridge mode. For setup and network details, see [docs/PODMAN.md](docs/PODMAN.md).
+**Requirements**: Podman must be installed and configured in rootless mode. Rootless Podman uses slirp4netns for port binding, which may add slight latency compared to Docker's host bridge mode.
+
+**macOS Setup**: On macOS, use Podman Machine:
+
+```bash
+# Initialize and start Podman machine
+podman machine init
+podman machine start
+
+# Set DOCKER_HOST environment variable (macOS only)
+export DOCKER_HOST="unix://$HOME/.local/share/containers/podman/podman.sock"
+
+# Or use the temporary socket location
+export DOCKER_HOST="unix:///var/folders/xx/xxx/T/podman/podman-machine-default-api.sock"
+
+# Now you can use Podman
+tsdbenv -e podman --postgres 15 --timescaledb 2.29.2
+```
 
 ## Commands
 
@@ -394,6 +411,55 @@ tsdbenv logs
 tsdbenv remove tsdb-04d30960
 
 # Prompts for confirmation before removal
+```
+
+## Troubleshooting
+
+### Podman Socket Not Found
+
+**Error**: `Podman is not running or not installed. Install with: brew install podman`
+
+**Solution**: On macOS with Podman Machine, set the `DOCKER_HOST` environment variable:
+
+```bash
+# Check running Podman machines
+podman machine list
+
+# Get the socket path (shown in machine output)
+export DOCKER_HOST="unix:///var/folders/.../T/podman/podman-machine-default-api.sock"
+
+# Verify connection
+podman ps
+```
+
+### Port Already in Use
+
+**Error**: `Port 5432 already in use`
+
+**Solution**: tsdbenv auto-detects ports. If a specific port is in use, run without `--port` or specify an alternative:
+
+```bash
+# Let tsdbenv find an available port
+tsdbenv new --postgres 16 --timescaledb 2.29.2
+
+# Or specify an alternative port
+tsdbenv new --postgres 16 --timescaledb 2.29.2 --port 5435
+```
+
+### Container Creation Fails
+
+**Ensure**:
+- Docker or Podman is running: `docker ps` or `podman ps`
+- Sufficient disk space: `docker system df` or `podman system df`
+- Network connectivity: check bind-ip is valid
+
+**Debug**:
+```bash
+# View detailed logs
+tsdbenv logs <container_name>
+
+# Verify image exists
+docker images | grep tsdbenv
 ```
 
 ## License
