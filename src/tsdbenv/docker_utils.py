@@ -330,15 +330,27 @@ class DockerClient:
         tar_stream.seek(0)
         container.put_archive("/tmp", tar_stream)
 
-        # Give PostgreSQL a moment to fully initialize socket after "ready" message
-        time.sleep(1)
+        # Wait for PostgreSQL to fully stabilize and be ready for connections
+        # Retry up to 5 times with 2-second intervals if database is shutting down
+        max_retries = 5
+        for attempt in range(max_retries):
+            time.sleep(2)
 
-        # Execute SQL file (use postgres user, guaranteed to exist at this point)
-        result = container.exec_run(
-            f"psql -U postgres -d {database} -f /tmp/init.sql",
-            user="postgres",
-        )
-        if result.exit_code != 0:
-            error_msg = result.output.decode() if result.output else "Unknown error"
-            raise RuntimeError(f"SQL execution failed: {error_msg}")
-        return result.output.decode() if result.output else ""
+            result = container.exec_run(
+                f"psql -U postgres -d {database} -f /tmp/init.sql",
+                user="postgres",
+            )
+
+            if result.exit_code == 0:
+                return result.output.decode() if result.output else ""
+
+            error_output = result.output.decode() if result.output else ""
+            # If database is shutting down, retry; otherwise fail immediately
+            if "shutting down" not in error_output.lower():
+                raise RuntimeError(f"SQL execution failed: {error_output}")
+
+            if attempt < max_retries - 1:
+                continue
+
+            # All retries exhausted
+            raise RuntimeError(f"SQL execution failed: {error_output}")
