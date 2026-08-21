@@ -45,6 +45,12 @@ def get_socket_path(engine: Engine) -> str:
             if Path(socket_path).exists():
                 return socket_path
 
+        # Try macOS Podman Machine socket path (/var/folders/...)
+        import glob
+        macos_machine_sockets = glob.glob("/var/folders/*/*/T/podman/podman-machine-default-api.sock")
+        if macos_machine_sockets:
+            return macos_machine_sockets[0]
+
         # Fallback: /run/user/{uid}/podman/podman.sock (Linux rootless default)
         uid = os.getuid()
         linux_rootless_path = f"/run/user/{uid}/podman/podman.sock"
