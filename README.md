@@ -1,6 +1,6 @@
 # tsdbenv
 
-PostgreSQL + TimescaleDB environment manager via Docker. Spin up isolated local database environments with one command.
+PostgreSQL + TimescaleDB environment manager via container. Spin up isolated local database environments with one command.
 
 ![PostgreSQL 18+](https://img.shields.io/badge/PostgreSQL-18%2B-336791?logo=postgresql&logoColor=white)
 ![TimescaleDB 2.29.0+](https://img.shields.io/badge/TimescaleDB-2.29.0%2B-0A1A29?logo=timescale&logoColor=white)
