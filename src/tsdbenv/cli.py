@@ -22,9 +22,10 @@ from tsdbenv.version_manager import VersionManager
 
 
 def log(message: str) -> None:
-    """Log message with ISO 8601 timestamp."""
-    ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    click.echo(f"{ts} {message}")
+    """Log message with ISO 8601 timestamp (only if verbose mode enabled)."""
+    if cli_state.verbose:
+        ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        click.echo(f"{ts} {message}")
 
 class CustomGroup(click.Group):
     """Custom group to format command help with short flags."""
@@ -116,8 +117,9 @@ def get_dockerfiles_dir() -> Path:
 
 
 class CLIState:
-    def __init__(self, engine: Engine = Engine.DOCKER):
+    def __init__(self, engine: Engine = Engine.DOCKER, verbose: bool = False):
         self.engine = engine
+        self.verbose = verbose
         self.state_dir = ensure_state_dir()
         self.state_tracker = StateTracker(state_dir=self.state_dir)
         self.version_manager = VersionManager(cache_dir=self.state_dir)
@@ -131,13 +133,13 @@ class CLIState:
 cli_state = CLIState()
 
 
-def init_cli_state(engine: Engine) -> None:
+def init_cli_state(engine: Engine, verbose: bool = False) -> None:
     """Reinitialize CLI state with specified engine."""
     global cli_state
-    cli_state = CLIState(engine=engine)
+    cli_state = CLIState(engine=engine, verbose=verbose)
     if cli_state.docker_client is None:
         engine_name = engine.value.capitalize()
-        click.echo(f"[ERROR] {engine_name} is not installed or not running.")
+        click.echo(f"ERROR {engine_name} is not installed or not running.")
         if engine == Engine.DOCKER:
             click.echo("   Please install Docker: https://docs.docker.com/get-docker/")
         else:
@@ -154,13 +156,14 @@ def init_cli_state(engine: Engine) -> None:
     default="docker",
     help="Container engine (default: docker)",
 )
+@click.option("--verbose", is_flag=True, help="Enable verbose logging")
 @click.pass_context
-def main(ctx, version, engine):
+def main(ctx, version, engine, verbose):
     """tsdbenv - PostgreSQL + TimescaleDB environment manager."""
     if version:
         click.echo(f"tsdbenv {__version__}")
         ctx.exit(0)
-    init_cli_state(Engine(engine))
+    init_cli_state(Engine(engine), verbose=verbose)
     if ctx.invoked_subcommand is None:
         show_interactive_menu()
 
