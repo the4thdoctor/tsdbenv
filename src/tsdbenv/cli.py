@@ -143,7 +143,7 @@ Examples:
 
     # Create tablespaces on container:
 
-    tsdbenv -t mycontainer --names fast,archive
+    tsdbenv -t mycontainer --tablespaces fast,archive
 
     # Use Podman instead of Docker:
 
@@ -411,8 +411,8 @@ def connectstring(container_name):
 
 @main.command("tablespaces")
 @click.argument("container_name", required=False)
-@click.option("--names", help="Comma-separated tablespace names")
-def create_tablespaces(container_name, names):
+@click.option("--tablespaces", help="Comma-separated tablespace names")
+def create_tablespaces(container_name, tablespaces):
     """Create database tablespaces (-t)"""
     if not container_name:
         containers = cli_state.state_tracker.load_containers()
@@ -431,11 +431,11 @@ def create_tablespaces(container_name, names):
         click.echo(f"Container '{container_name}' not found.")
         return
 
-    if not names:
-        names = click.prompt("Tablespace names (comma-separated)")
+    if not tablespaces:
+        tablespaces = click.prompt("Tablespace names (comma-separated)")
 
     try:
-        ts_list = [ts.strip() for ts in names.split(",")]
+        ts_list = [ts.strip() for ts in tablespaces.split(",")]
         click.echo(f"[ACTION] Creating {len(ts_list)} tablespace(s)...")
         results = cli_state.docker_client.create_tablespaces(container.docker_id, ts_list)
         successful = sum(1 for v in results.values() if v)
