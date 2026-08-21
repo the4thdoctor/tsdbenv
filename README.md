@@ -71,20 +71,34 @@ tsdbenv -n --postgres 15 --timescaledb 2.10.0
 podman machine init
 podman machine start
 
-# Set DOCKER_HOST environment variable (auto-detect socket)
-export DOCKER_HOST="$(podman info --format '{{.Host.RemoteSocket.Path}}')"
-
-# Verify connection
-podman ps
-
-# Now you can use Podman with tsdbenv
-tsdbenv -n --engine podman --postgres 15 --timescaledb 2.29.2
+# Podman Machine socket is auto-detected — no DOCKER_HOST needed!
+tsdbenv -n --engine podman --postgres 15 --timescaledb 2.28.3
 ```
 
-**Persistent Setup** (add to `~/.zshrc` or `~/.bashrc`):
+**Switching between Docker and Podman**:
+
+⚠️ **Important**: `DOCKER_HOST` environment variable can interfere with Docker if set to Podman socket.
+
 ```bash
-export DOCKER_HOST="unix://$(podman info --format '{{.Host.RemoteSocket.Path}}' 2>/dev/null || \
-  ls /var/folders/*/T/podman/*api.sock 2>/dev/null | head -1)"
+# Use Docker (default)
+unset DOCKER_HOST
+export TSDBENV_ENGINE=docker
+tsdbenv -l
+
+# Use Podman
+unset DOCKER_HOST  # Let Podman auto-detect socket
+export TSDBENV_ENGINE=podman
+tsdbenv -l
+
+# Or use -e flag to override per-command
+tsdbenv -e docker -l  # Use Docker this command
+tsdbenv -e podman -l  # Use Podman this command
+```
+
+**Legacy persistent setup** (only if needed):
+```bash
+# Not recommended — let auto-detection handle it
+# export DOCKER_HOST="$(podman info --format '{{.Host.RemoteSocket.Path}}')"
 ```
 
 ## Commands
