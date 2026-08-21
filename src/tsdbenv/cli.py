@@ -210,7 +210,8 @@ def init_cli_state(engine: Engine, verbose: bool = False) -> None:
     "--engine",
     type=click.Choice(["docker", "podman"]),
     default="docker",
-    help="Container engine (default: docker)",
+    envvar="TSDBENV_ENGINE",
+    help="Container engine (default: docker, or TSDBENV_ENGINE env var)",
 )
 @click.option("--verbose", is_flag=True, help="Enable verbose logging")
 @click.pass_context
