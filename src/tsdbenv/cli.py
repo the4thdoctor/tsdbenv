@@ -121,28 +121,28 @@ def main(ctx, version, engine):
 
 Examples:
 
-  Create container:
+    # Create container:
     tsdbenv -n --postgres 16 --timescaledb 2.29.2
 
-  Create with init SQL and tablespaces:
+    # Create with init SQL and tablespaces:
     tsdbenv -n --postgres 16 --timescaledb 2.29.2 -t fast,archive --init schema.sql
 
-  List containers:
+    # List existing containers:
     tsdbenv -l
 
-  Show compatibility matrix:
+    # Show the current compatibility matrix:
     tsdbenv -m
 
-  Get connection string:
+    # Get connection string:
     tsdbenv -c mycontainer
 
-  Create tablespaces on container:
+    # Create tablespaces on container:
     tsdbenv -t mycontainer --names fast,archive
 
-  Use Podman instead of Docker:
+    # Use Podman instead of Docker:
     tsdbenv -n --postgres 16 --engine podman
 
-  Refresh version cache:
+    # Refresh version cache:
     tsdbenv -g
     """
     if version:
